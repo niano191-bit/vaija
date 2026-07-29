@@ -36,7 +36,9 @@ export default function AtividadeScreen() {
       </View>
       <ScrollView contentContainerStyle={{ padding: 20, gap: 12 }}>
         {list.length === 0 ? (
-          <Text style={styles.empty}>Nenhuma atividade ainda</Text>
+          <Text style={styles.empty}>
+            {tab === "entregas" ? "Entregas entram na próxima versão" : "Nenhuma atividade ainda"}
+          </Text>
         ) : (
           list.map((r) => (
             <View key={r.id} style={styles.item}>

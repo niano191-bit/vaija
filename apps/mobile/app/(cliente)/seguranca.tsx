@@ -1,17 +1,25 @@
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { Alert, Pressable, StyleSheet, Switch, Text, View } from "react-native";
+import { Alert, Pressable, StyleSheet, Switch, Text, TextInput, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { api } from "@vaija/shared";
-import { Screen, Title } from "../../src/components/ui";
+import { Button, Screen, Title } from "../../src/components/ui";
 import { useAuth } from "../../src/store";
 import { theme } from "../../src/theme";
 
+type Contact = { name: string; phone: string };
+
 export default function SegurancaScreen() {
   const router = useRouter();
-  const { token, activeRideId } = useAuth();
+  const { token, activeRideId, user } = useAuth();
   const [record, setRecord] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [contacts, setContacts] = useState<Contact[]>([
+    { name: "Contato principal", phone: user?.phone || "(11) 90000-0000" },
+  ]);
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [showForm, setShowForm] = useState(false);
 
   const sos = async () => {
     try {
@@ -23,6 +31,17 @@ export default function SegurancaScreen() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const addContact = () => {
+    if (!name.trim() || !phone.trim()) {
+      Alert.alert("Preencha nome e telefone");
+      return;
+    }
+    setContacts((c) => [...c, { name: name.trim(), phone: phone.trim() }]);
+    setName("");
+    setPhone("");
+    setShowForm(false);
   };
 
   return (
@@ -37,10 +56,39 @@ export default function SegurancaScreen() {
       </Pressable>
       <Text style={styles.hint}>Use apenas em emergências reais</Text>
 
-      <Pressable style={styles.row} onPress={() => Alert.alert("Contatos", "Gerenciar contatos de emergência (demo)")}>
-        <Text style={styles.rowLabel}>Contatos de emergência</Text>
-        <Ionicons name="chevron-forward" size={18} color={theme.colors.textMuted} />
-      </Pressable>
+      <Text style={styles.section}>Contatos de emergência</Text>
+      {contacts.map((c, i) => (
+        <View key={`${c.phone}-${i}`} style={styles.contact}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.contactName}>{c.name}</Text>
+            <Text style={styles.contactPhone}>{c.phone}</Text>
+          </View>
+        </View>
+      ))}
+      {showForm ? (
+        <View style={styles.form}>
+          <TextInput
+            style={styles.input}
+            placeholder="Nome"
+            placeholderTextColor={theme.colors.textMuted}
+            value={name}
+            onChangeText={setName}
+          />
+          <TextInput
+            style={styles.input}
+            placeholder="Telefone"
+            placeholderTextColor={theme.colors.textMuted}
+            value={phone}
+            onChangeText={setPhone}
+            keyboardType="phone-pad"
+          />
+          <Button title="Salvar contato" onPress={addContact} />
+        </View>
+      ) : (
+        <Pressable onPress={() => setShowForm(true)}>
+          <Text style={styles.add}>+ Adicionar contato</Text>
+        </Pressable>
+      )}
 
       <View style={styles.row}>
         <Text style={styles.rowLabel}>Gravar áudio da viagem</Text>
@@ -61,15 +109,33 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  sosText: { color: theme.colors.white, fontSize: 36, fontWeight: "900" },
-  hint: { textAlign: "center", color: theme.colors.textMuted, marginTop: 12, marginBottom: 28 },
-  row: {
+  sosText: { color: "#fff", fontWeight: "900", fontSize: 28 },
+  hint: { textAlign: "center", color: theme.colors.textMuted, marginTop: 10 },
+  section: { marginTop: 28, fontWeight: "800", color: theme.colors.navy, marginBottom: 8 },
+  contact: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 16,
+    paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
+  },
+  contactName: { fontWeight: "700", color: theme.colors.navy },
+  contactPhone: { color: theme.colors.textMuted, marginTop: 2 },
+  add: { color: theme.colors.blue, fontWeight: "700", marginTop: 12 },
+  form: { marginTop: 12, gap: 10 },
+  input: {
+    height: 48,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    paddingHorizontal: 12,
+    backgroundColor: theme.colors.gray,
+    color: theme.colors.navy,
+  },
+  row: {
+    marginTop: 24,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
   rowLabel: { fontWeight: "600", color: theme.colors.navy },
 });

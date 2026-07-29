@@ -8,29 +8,49 @@ import { theme } from "../../src/theme";
 
 export default function NavegarScreen() {
   const router = useRouter();
-  const { token, activeRideId } = useAuth();
+  const { token, activeRideId, setActiveRideId } = useAuth();
   const [ride, setRide] = useState<Ride | null>(null);
-  const rideIdRef = useRef<string | null>(null);
+  const navKey = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!token || !activeRideId) return;
-    const tick = async () => {
+    if (!token) return;
+
+    const load = async () => {
       try {
-        const r = await api.getRide(token, activeRideId);
-        setRide((prev) => {
-          if (prev && prev.id === r.id && prev.status === r.status && prev.clientName === r.clientName) {
-            return prev;
-          }
-          return r;
-        });
-        if (r.status === "em_andamento" && rideIdRef.current !== `go:${r.id}`) {
-          rideIdRef.current = `go:${r.id}`;
+        let current: Ride | null = null;
+        if (activeRideId) {
+          current = await api.getRide(token, activeRideId);
+        } else {
+          const list = await api.getRides(token, {
+            mine: true,
+            status: "aceita,a_caminho,em_andamento",
+          });
+          current = list[0] || null;
+          if (current) await setActiveRideId(current.id);
+        }
+        if (!current) return;
+
+        setRide((prev) =>
+          prev &&
+          prev.id === current!.id &&
+          prev.status === current!.status &&
+          prev.clientName === current!.clientName &&
+          prev.destination?.label === current!.destination?.label
+            ? prev
+            : current,
+        );
+
+        const key = `${current.id}:${current.status}`;
+        if (navKey.current === key) return;
+        if (current.status === "em_andamento") {
+          navKey.current = key;
           router.replace("/(motorista)/em-andamento");
         }
       } catch {}
     };
-    tick();
-    const id = setInterval(tick, 3000);
+
+    load();
+    const id = setInterval(load, 3000);
     return () => clearInterval(id);
   }, [token, activeRideId]);
 
@@ -46,18 +66,12 @@ export default function NavegarScreen() {
 
   return (
     <Screen>
-      <MapPlaceholder
-        height={360}
-        label="Até o passageiro"
-        route
-        lat={mapLat}
-        lng={mapLng}
-      />
+      <MapPlaceholder height={360} label="Até o passageiro" route lat={mapLat} lng={mapLng} />
       <View style={styles.sheet}>
         <Text style={styles.title}>Buscar passageiro</Text>
         <Text style={styles.name}>{ride?.clientName || "Carregando…"}</Text>
-        <Text style={styles.addr}>{ride?.origin.address || "—"}</Text>
-        <Text style={styles.dest}>Destino: {ride?.destination.label || "—"}</Text>
+        <Text style={styles.addr}>{ride?.origin?.address || "—"}</Text>
+        <Text style={styles.dest}>Destino: {ride?.destination?.label || "—"}</Text>
         <Button title="Cheguei / Iniciar corrida" onPress={arrived} style={{ marginTop: 24 }} disabled={!ride} />
       </View>
     </Screen>

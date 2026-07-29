@@ -55,7 +55,8 @@ export default function MotoristaInicio() {
   const accept = async () => {
     if (!pending) return;
     const ride = await api.updateRide(token!, pending.id, { status: "aceita" });
-    setActiveRideId(ride.id);
+    await setActiveRideId(ride.id);
+    redirectedKey.current = `${ride.id}:${ride.status}`;
     setPending(null);
     router.push("/(motorista)/navegar");
   };

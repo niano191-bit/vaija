@@ -1,19 +1,19 @@
 import { useRouter } from "expo-router";
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { Button, Screen } from "../../../src/components/ui";
+import { Screen } from "../../../src/components/ui";
 import { useAuth } from "../../../src/store";
 import { theme } from "../../../src/theme";
 
 const MENU = [
-  { label: "Dados pessoais", icon: "person-outline", route: null },
+  { label: "Dados pessoais", icon: "person-outline", route: "/(cliente)/dados" },
   { label: "Formas de pagamento", icon: "card-outline", route: "/(cliente)/(tabs)/carteira" },
   { label: "Favoritos", icon: "heart-outline", route: "/(cliente)/favoritos" },
   { label: "Cupons", icon: "pricetag-outline", route: "/(cliente)/cupons" },
   { label: "Indicar amigos", icon: "people-outline", route: "/(cliente)/indicar" },
   { label: "Segurança / SOS", icon: "shield-checkmark-outline", route: "/(cliente)/seguranca" },
-  { label: "Notificações", icon: "notifications-outline", route: null },
-  { label: "Privacidade", icon: "lock-closed-outline", route: null },
+  { label: "Notificações", icon: "notifications-outline", route: "/(cliente)/notificacoes" },
+  { label: "Privacidade", icon: "lock-closed-outline", route: "/(cliente)/privacidade" },
   { label: "Ajuda / Suporte", icon: "headset-outline", route: "/(cliente)/suporte" },
 ];
 
@@ -35,16 +35,14 @@ export default function ContaScreen() {
           </View>
           <Text style={styles.name}>{user?.name}</Text>
           <Text style={styles.phone}>{user?.phone}</Text>
+          <Text style={styles.email}>{user?.email}</Text>
         </View>
 
         {MENU.map((item) => (
           <Pressable
             key={item.label}
             style={styles.row}
-            onPress={() => {
-              if (item.route) router.push(item.route as any);
-              else Alert.alert(item.label, "Em breve nesta demo");
-            }}
+            onPress={() => router.push(item.route as any)}
           >
             <Ionicons name={item.icon as any} size={20} color={theme.colors.navy} />
             <Text style={styles.rowLabel}>{item.label}</Text>
@@ -73,6 +71,7 @@ const styles = StyleSheet.create({
   avatarText: { color: theme.colors.yellow, fontSize: 28, fontWeight: "800" },
   name: { marginTop: 12, fontWeight: "800", fontSize: 20, color: theme.colors.navy },
   phone: { color: theme.colors.textMuted, marginTop: 4 },
+  email: { color: theme.colors.textMuted, marginTop: 2, fontSize: 13 },
   row: {
     flexDirection: "row",
     alignItems: "center",
