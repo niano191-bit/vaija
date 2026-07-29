@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { Alert, Linking, Pressable, StyleSheet, Text, View } from "react-native";
 import { api, type Ride } from "@vaija/shared";
 import { Button, MapPlaceholder, Screen } from "../../src/components/ui";
+import { sendQuickRideMessage, watchRideMessages } from "../../src/rideChat";
 import { useAuth } from "../../src/store";
 import { theme } from "../../src/theme";
 
@@ -15,10 +16,11 @@ function toTel(phone?: string) {
 
 export default function AguardandoScreen() {
   const router = useRouter();
-  const { token, activeRideId, setActiveRideId } = useAuth();
+  const { token, user, activeRideId, setActiveRideId } = useAuth();
   const [ride, setRide] = useState<Ride | null>(null);
   const [busy, setBusy] = useState(false);
   const navKey = useRef<string | null>(null);
+  const seenMsgs = useRef({ seen: new Set<string>(), primed: false });
 
   useEffect(() => {
     if (!token || !activeRideId) return;
@@ -46,11 +48,16 @@ export default function AguardandoScreen() {
           }
         })
         .catch(() => {});
+      if (user?.id) {
+        watchRideMessages(token, activeRideId, user.id, seenMsgs.current, (text, fromName) => {
+          Alert.alert(`Mensagem de ${fromName}`, text);
+        });
+      }
     };
     tick();
     const id = setInterval(tick, 3000);
     return () => clearInterval(id);
-  }, [token, activeRideId]);
+  }, [token, activeRideId, user?.id]);
 
   const cancel = async () => {
     if (!ride || busy) return;
@@ -67,21 +74,11 @@ export default function AguardandoScreen() {
   };
 
   const messageDriver = () => {
-    if (!ride?.driverName) {
+    if (!ride?.driverName || !token) {
       Alert.alert("Aguarde", "Assim que um motorista aceitar, você poderá enviar mensagem.");
       return;
     }
-    Alert.alert("Mensagem para " + ride.driverName, "Escolha uma mensagem rápida", [
-      { text: "Cancelar", style: "cancel" },
-      {
-        text: "Estou aqui",
-        onPress: () => Alert.alert("Enviado", "Mensagem enviada ao motorista."),
-      },
-      {
-        text: "Já estou saindo",
-        onPress: () => Alert.alert("Enviado", "Mensagem enviada ao motorista."),
-      },
-    ]);
+    sendQuickRideMessage(token, ride.id, ride.driverName, ["Estou aqui", "Já estou saindo"]);
   };
 
   const callDriver = async () => {
@@ -102,10 +99,18 @@ export default function AguardandoScreen() {
   };
 
   const found = ride && ["aceita", "a_caminho"].includes(ride.status);
+  const mapLat = ride?.origin.lat ?? -23.55;
+  const mapLng = ride?.origin.lng ?? -46.63;
 
   return (
     <Screen>
-      <MapPlaceholder height={360} label={found ? "Motorista a caminho" : "Buscando motorista..."} route />
+      <MapPlaceholder
+        height={360}
+        label={found ? "Motorista a caminho" : "Buscando motorista..."}
+        route
+        lat={mapLat}
+        lng={mapLng}
+      />
       <View style={styles.sheet}>
         <Text style={styles.status}>
           {found ? "Encontramos um motorista" : "Procurando motorista..."}

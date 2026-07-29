@@ -29,15 +29,18 @@ export default function SuportePage() {
   }, [token]);
 
   const visible = useMemo(() => {
-    if (filter === "todos") return tickets;
-    if (filter === "resolvido") return tickets.filter((t) => t.status === "resolvido");
-    return tickets.filter((t) => t.status !== "resolvido");
+    const base = tickets.filter((t) => t.category !== "Chat");
+    if (filter === "todos") return base;
+    if (filter === "resolvido") return base.filter((t) => t.status === "resolvido");
+    return base.filter((t) => t.status !== "resolvido");
   }, [tickets, filter]);
 
   return (
     <Guard>
       <h1 className="text-2xl font-extrabold mb-2">Suporte</h1>
-      <p className="text-sm text-gray-500 mb-4">{tickets.length} ticket(s)</p>
+      <p className="text-sm text-gray-500 mb-4">
+        {tickets.filter((t) => t.category !== "Chat").length} ticket(s) de suporte
+      </p>
       {error ? (
         <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           {error}{" "}

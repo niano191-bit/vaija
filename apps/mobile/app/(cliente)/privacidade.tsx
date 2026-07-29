@@ -1,11 +1,54 @@
 import { useRouter } from "expo-router";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useState } from "react";
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { Screen, Title } from "../../src/components/ui";
+import { api } from "@vaija/shared";
+import { Button, Screen, Title } from "../../src/components/ui";
+import { useAuth } from "../../src/store";
 import { theme } from "../../src/theme";
 
 export default function PrivacidadeScreen() {
   const router = useRouter();
+  const { token, user, logout } = useAuth();
+  const [busy, setBusy] = useState(false);
+
+  const requestDelete = () => {
+    Alert.alert(
+      "Excluir conta?",
+      "Vamos abrir um pedido de exclusão para o suporte. Nesta demo você também será desconectado.",
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Solicitar exclusão",
+          style: "destructive",
+          onPress: async () => {
+            if (!token || busy) return;
+            try {
+              setBusy(true);
+              await api.createTicket(token, {
+                category: "Conta",
+                subject: "Exclusão de conta",
+                message: `Pedido de exclusão da conta ${user?.email || user?.id || ""}. Remover dados pessoais, corridas e carteira conforme LGPD (demo).`,
+              });
+              Alert.alert("Pedido enviado", "O suporte recebeu sua solicitação de exclusão.", [
+                {
+                  text: "Sair",
+                  onPress: async () => {
+                    await logout();
+                    router.replace("/(auth)/welcome");
+                  },
+                },
+              ]);
+            } catch (e: any) {
+              Alert.alert("Erro", e.message || "Não foi possível enviar o pedido");
+            } finally {
+              setBusy(false);
+            }
+          },
+        },
+      ],
+    );
+  };
 
   return (
     <Screen style={{ paddingTop: 52 }}>
@@ -33,9 +76,16 @@ export default function PrivacidadeScreen() {
         <View style={styles.card}>
           <Text style={styles.title}>Conta e exclusão</Text>
           <Text style={styles.body}>
-            Para excluir a conta nesta demo, fale com o suporte no app. Em produção isso dispara o fluxo
-            oficial de remoção de dados.
+            Você pode solicitar a exclusão da conta. O pedido aparece no painel de suporte do admin.
           </Text>
+          <Button
+            title={busy ? "Enviando..." : "Solicitar exclusão da conta"}
+            variant="outline"
+            onPress={requestDelete}
+            disabled={busy}
+            loading={busy}
+            style={{ marginTop: 14 }}
+          />
         </View>
       </ScrollView>
     </Screen>

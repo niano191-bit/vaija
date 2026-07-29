@@ -157,3 +157,12 @@ export interface DashboardStats {
   totalClients: number;
   totalDrivers: number;
 }
+
+export interface RideMessage {
+  id: string;
+  rideId: string;
+  fromUserId: string;
+  fromName: string;
+  text: string;
+  createdAt: string;
+}

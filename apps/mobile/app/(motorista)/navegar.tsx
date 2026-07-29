@@ -3,15 +3,17 @@ import { useEffect, useRef, useState } from "react";
 import { Alert, StyleSheet, Text, View } from "react-native";
 import { api, type Ride } from "@vaija/shared";
 import { Button, MapPlaceholder, Screen } from "../../src/components/ui";
+import { sendQuickRideMessage, watchRideMessages } from "../../src/rideChat";
 import { useAuth } from "../../src/store";
 import { theme } from "../../src/theme";
 
 export default function NavegarScreen() {
   const router = useRouter();
-  const { token, activeRideId, setActiveRideId } = useAuth();
+  const { token, user, activeRideId, setActiveRideId } = useAuth();
   const [ride, setRide] = useState<Ride | null>(null);
   const [busy, setBusy] = useState(false);
   const navKey = useRef<string | null>(null);
+  const seenMsgs = useRef({ seen: new Set<string>(), primed: false });
 
   useEffect(() => {
     if (!token) return;
@@ -41,6 +43,12 @@ export default function NavegarScreen() {
             : current,
         );
 
+        if (user?.id) {
+          watchRideMessages(token, current.id, user.id, seenMsgs.current, (text, fromName) => {
+            Alert.alert(`Mensagem de ${fromName}`, text);
+          });
+        }
+
         const key = `${current.id}:${current.status}`;
         if (navKey.current === key) return;
         if (current.status === "em_andamento") {
@@ -55,7 +63,7 @@ export default function NavegarScreen() {
     load();
     const id = setInterval(load, 3000);
     return () => clearInterval(id);
-  }, [token, activeRideId]);
+  }, [token, activeRideId, user?.id]);
 
   const arrived = async () => {
     if (!ride || busy) return;
@@ -71,6 +79,15 @@ export default function NavegarScreen() {
     }
   };
 
+  const messageClient = () => {
+    if (!ride || !token) return;
+    sendQuickRideMessage(token, ride.id, ride.clientName || "Passageiro", [
+      "Chegando",
+      "Estou no local",
+      "Onde você está?",
+    ]);
+  };
+
   const mapLat = ride?.origin.lat ?? -23.55;
   const mapLng = ride?.origin.lng ?? -46.63;
 
@@ -82,13 +99,16 @@ export default function NavegarScreen() {
         <Text style={styles.name}>{ride?.clientName || "Carregando…"}</Text>
         <Text style={styles.addr}>{ride?.origin?.address || "—"}</Text>
         <Text style={styles.dest}>Destino: {ride?.destination?.label || "—"}</Text>
-        <Button
-          title={busy ? "Iniciando..." : "Cheguei / Iniciar corrida"}
-          onPress={arrived}
-          style={{ marginTop: 24 }}
-          disabled={!ride || busy}
-          loading={busy}
-        />
+        <View style={styles.actions}>
+          <Button title="Mensagem" variant="secondary" style={{ flex: 1 }} onPress={messageClient} disabled={!ride} />
+          <Button
+            title={busy ? "Iniciando..." : "Cheguei"}
+            onPress={arrived}
+            style={{ flex: 1 }}
+            disabled={!ride || busy}
+            loading={busy}
+          />
+        </View>
       </View>
     </Screen>
   );
@@ -107,4 +127,5 @@ const styles = StyleSheet.create({
   name: { marginTop: 12, fontWeight: "700", color: theme.colors.navy, fontSize: 16 },
   addr: { color: theme.colors.textMuted, marginTop: 4 },
   dest: { marginTop: 12, color: theme.colors.blue, fontWeight: "600" },
+  actions: { flexDirection: "row", gap: 10, marginTop: 24 },
 });

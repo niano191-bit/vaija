@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { Alert, Linking, Pressable, Share, StyleSheet, Text, View } from "react-native";
 import { api, type Ride } from "@vaija/shared";
 import { Button, MapPlaceholder, Screen } from "../../src/components/ui";
+import { sendQuickRideMessage, watchRideMessages } from "../../src/rideChat";
 import { useAuth } from "../../src/store";
 import { theme } from "../../src/theme";
 
@@ -15,10 +16,11 @@ function toTel(phone?: string) {
 
 export default function CorridaScreen() {
   const router = useRouter();
-  const { token, activeRideId, setActiveRideId } = useAuth();
+  const { token, user, activeRideId, setActiveRideId } = useAuth();
   const [ride, setRide] = useState<Ride | null>(null);
   const [busy, setBusy] = useState(false);
   const navKey = useRef<string | null>(null);
+  const seenMsgs = useRef({ seen: new Set<string>(), primed: false });
 
   useEffect(() => {
     if (!token || !activeRideId) return;
@@ -41,19 +43,20 @@ export default function CorridaScreen() {
           }
         })
         .catch(() => {});
+      if (user?.id) {
+        watchRideMessages(token, activeRideId, user.id, seenMsgs.current, (text, fromName) => {
+          Alert.alert(`Mensagem de ${fromName}`, text);
+        });
+      }
     };
     tick();
     const id = setInterval(tick, 3000);
     return () => clearInterval(id);
-  }, [token, activeRideId]);
+  }, [token, activeRideId, user?.id]);
 
   const messageDriver = () => {
-    if (!ride?.driverName) return;
-    Alert.alert("Mensagem para " + ride.driverName, "Escolha uma mensagem rápida", [
-      { text: "Cancelar", style: "cancel" },
-      { text: "Estou aqui", onPress: () => Alert.alert("Enviado", "Mensagem enviada ao motorista.") },
-      { text: "Já estou saindo", onPress: () => Alert.alert("Enviado", "Mensagem enviada ao motorista.") },
-    ]);
+    if (!ride?.driverName || !token) return;
+    sendQuickRideMessage(token, ride.id, ride.driverName, ["Estou aqui", "Já estou saindo", "Pode acelerar?"]);
   };
 
   const callDriver = async () => {
@@ -92,6 +95,9 @@ export default function CorridaScreen() {
     ]);
   };
 
+  const mapLat = ride?.destination.lat ?? ride?.origin.lat ?? -23.55;
+  const mapLng = ride?.destination.lng ?? ride?.origin.lng ?? -46.63;
+
   return (
     <Screen>
       <View style={styles.top}>
@@ -99,7 +105,7 @@ export default function CorridaScreen() {
           {ride?.driverName || "Motorista"} · {ride?.vehicle?.plate || "—"}
         </Text>
       </View>
-      <MapPlaceholder height={400} label="Em andamento" route />
+      <MapPlaceholder height={400} label="Em andamento" route lat={mapLat} lng={mapLng} />
       <View style={styles.sheet}>
         <Text style={styles.eta}>Chegada em {ride?.etaMin || 8} min</Text>
         <Text style={styles.dist}>

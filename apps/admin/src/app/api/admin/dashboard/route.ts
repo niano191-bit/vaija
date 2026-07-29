@@ -26,7 +26,11 @@ export async function GET(req: Request) {
       .gte("created_at", startOfDay.toISOString()),
     supabase.from("drivers").select("*", { count: "exact", head: true }).eq("online", true),
     supabase.from("sos_alerts").select("*", { count: "exact", head: true }).eq("status", "aberto"),
-    supabase.from("support_tickets").select("*", { count: "exact", head: true }).neq("status", "resolvido"),
+    supabase
+      .from("support_tickets")
+      .select("*", { count: "exact", head: true })
+      .neq("status", "resolvido")
+      .neq("category", "Chat"),
     supabase.from("profiles").select("*", { count: "exact", head: true }).eq("role", "cliente"),
     supabase.from("profiles").select("*", { count: "exact", head: true }).eq("role", "motorista"),
   ]);

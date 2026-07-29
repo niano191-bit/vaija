@@ -85,7 +85,12 @@ export default function MotoristaInicio() {
 
   return (
     <Screen>
-      <MapPlaceholder height={320} label={online ? "Você está online" : "Offline"} />
+      <MapPlaceholder
+        height={320}
+        label={online ? "Você está online" : "Offline"}
+        lat={driver?.lat ?? -23.55}
+        lng={driver?.lng ?? -46.63}
+      />
       <View style={styles.sheet}>
         <View style={styles.row}>
           <View>

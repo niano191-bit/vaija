@@ -4,6 +4,7 @@ import type {
   DashboardStats,
   Favorite,
   Ride,
+  RideMessage,
   SosAlert,
   SupportTicket,
   Transaction,
@@ -120,6 +121,12 @@ export const api = {
   },
 
   getRide: (token: string, id: string) => request<Ride>(`/rides/${id}`, { token }),
+
+  getRideMessages: (token: string, rideId: string) =>
+    request<RideMessage[]>(`/rides/${rideId}/messages`, { token }),
+
+  sendRideMessage: (token: string, rideId: string, text: string) =>
+    request<RideMessage>(`/rides/${rideId}/messages`, { method: "POST", body: { text }, token }),
 
   updateRide: (token: string, id: string, data: { status?: RideStatus; rating?: number; comment?: string }) =>
     request<Ride>(`/rides/${id}`, { method: "PATCH", body: data, token }),

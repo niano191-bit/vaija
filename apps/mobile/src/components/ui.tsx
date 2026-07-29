@@ -11,6 +11,7 @@ import {
   ViewStyle,
   TextStyle,
 } from "react-native";
+import { WebView } from "react-native-webview";
 import { theme } from "../theme";
 
 export function Logo({ size = "md" }: { size?: "sm" | "md" | "lg" }) {
@@ -172,11 +173,12 @@ export function MapPlaceholder({
   lng?: number;
 }) {
   const delta = route ? 0.035 : 0.02;
-  // Round coords so tiny float noise doesn't reload the iframe
+  // Round coords so tiny float noise doesn't reload the map
   const rLat = Math.round(lat * 1e4) / 1e4;
   const rLng = Math.round(lng * 1e4) / 1e4;
   const bbox = `${rLng - delta},${rLat - delta},${rLng + delta},${rLat + delta}`;
   const osmSrc = `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${rLat}%2C${rLng}`;
+  const osmExternal = `https://www.openstreetmap.org/?mlat=${rLat}&mlon=${rLng}#map=14/${rLat}/${rLng}`;
 
   if (Platform.OS === "web") {
     return (
@@ -187,24 +189,35 @@ export function MapPlaceholder({
           src={osmSrc}
           style={{ border: 0, width: "100%", height: "100%", pointerEvents: "none" }}
         />
-        <Text style={styles.mapLabel}>{label}</Text>
+        <View style={styles.mapOverlay}>
+          <Text style={styles.mapLabel}>{label}</Text>
+        </View>
       </View>
     );
   }
 
   return (
-    <Pressable
-      style={[styles.map, { height }]}
-      onPress={() =>
-        Linking.openURL(`https://www.openstreetmap.org/?mlat=${rLat}&mlon=${rLng}#map=14/${rLat}/${rLng}`)
-      }
-    >
-      <View style={styles.mapGrid} />
-      {route ? <View style={styles.routeLine} /> : null}
-      <View style={styles.pin} />
-      <Text style={styles.mapLabel}>{label}</Text>
-      <Text style={styles.mapHint}>Toque para abrir o mapa</Text>
-    </Pressable>
+    <View style={[styles.map, { height }]}>
+      <WebView
+        source={{ uri: osmSrc }}
+        style={StyleSheet.absoluteFillObject}
+        scrollEnabled={false}
+        nestedScrollEnabled={false}
+        javaScriptEnabled
+        domStorageEnabled
+        startInLoadingState
+        renderLoading={() => (
+          <View style={[StyleSheet.absoluteFillObject, styles.mapLoading]}>
+            <ActivityIndicator color={theme.colors.yellow} />
+          </View>
+        )}
+        onError={() => Linking.openURL(osmExternal)}
+      />
+      <Pressable style={styles.mapOverlay} onPress={() => Linking.openURL(osmExternal)}>
+        <Text style={styles.mapLabel}>{label}</Text>
+        <Text style={styles.mapHint}>Toque para ampliar</Text>
+      </Pressable>
+    </View>
   );
 }
 
@@ -247,49 +260,22 @@ const styles = StyleSheet.create({
     backgroundColor: "#D6E4F0",
     borderRadius: 16,
     overflow: "hidden",
+  },
+  mapLoading: {
     alignItems: "center",
     justifyContent: "center",
+    backgroundColor: "#D6E4F0",
   },
-  mapGrid: {
-    ...StyleSheet.absoluteFillObject,
-    opacity: 0.35,
-    backgroundColor: "transparent",
-    borderWidth: 1,
-    borderColor: "#9BB8D0",
-  },
-  routeLine: {
+  mapOverlay: {
     position: "absolute",
-    width: "60%",
-    height: 4,
-    backgroundColor: theme.colors.blue,
-    borderRadius: 4,
-    transform: [{ rotate: "-20deg" }],
+    left: 12,
+    right: 12,
+    bottom: 12,
+    backgroundColor: "rgba(11, 31, 58, 0.78)",
+    borderRadius: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
   },
-  pin: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: theme.colors.navy,
-    borderWidth: 3,
-    borderColor: theme.colors.yellow,
-  },
-  mapLabel: {
-    position: "absolute",
-    bottom: 10,
-    color: theme.colors.navy,
-    fontWeight: "600",
-    fontSize: 12,
-  },
-  mapHint: {
-    position: "absolute",
-    top: 10,
-    right: 10,
-    color: theme.colors.navy,
-    fontWeight: "700",
-    fontSize: 11,
-    backgroundColor: "rgba(255,255,255,0.85)",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
+  mapLabel: { color: theme.colors.white, fontWeight: "800", fontSize: 13 },
+  mapHint: { color: theme.colors.yellow, fontSize: 11, marginTop: 2, fontWeight: "600" },
 });
