@@ -1,0 +1,14 @@
+{
+  "name": "vaija",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "mock-api": "pnpm --filter @vaija/mock-api start",
+    "mobile": "pnpm --filter @vaija/mobile start",
+    "admin": "pnpm --filter @vaija/admin dev",
+    "install:all": "pnpm install"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

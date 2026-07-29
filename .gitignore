@@ -1,0 +1,16 @@
+node_modules
+.expo
+.expo-shared
+dist
+.next
+.turbo
+*.log
+.env
+.env.local
+.DS_Store
+*.tsbuildinfo
+web-build
+android
+ios
+.vercel
+supabase/.temp
