@@ -14,3 +14,4 @@ android
 ios
 .vercel
 supabase/.temp
+.env*
