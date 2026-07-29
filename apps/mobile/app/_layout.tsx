@@ -2,6 +2,7 @@ import { Stack } from "expo-router";
 import { useEffect } from "react";
 import { ActivityIndicator, View } from "react-native";
 import { StatusBar } from "expo-status-bar";
+import { NetworkBanner } from "../src/components/NetworkBanner";
 import { useAuth } from "../src/store";
 import { theme } from "../src/theme";
 
@@ -23,7 +24,10 @@ export default function RootLayout() {
   return (
     <>
       <StatusBar style="light" />
-      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: theme.colors.white } }} />
+      <View style={{ flex: 1 }}>
+        <NetworkBanner />
+        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: theme.colors.white } }} />
+      </View>
     </>
   );
 }

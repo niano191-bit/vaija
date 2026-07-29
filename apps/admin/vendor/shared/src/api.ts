@@ -46,6 +46,8 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
 }
 
 export const api = {
+  health: () => request<{ ok: boolean; brand?: string; supabase?: boolean }>("/health"),
+
   login: (email: string, password: string) =>
     request<AuthResponse>("/auth/login", {
       method: "POST",

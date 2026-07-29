@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { useAdminAuth } from "@/lib/store";
 
 const NAV = [
@@ -20,6 +21,26 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { user, logout } = useAdminAuth();
+  const [apiOk, setApiOk] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    const ping = async () => {
+      try {
+        const res = await fetch("/api/health");
+        if (!alive) return;
+        setApiOk(res.ok);
+      } catch {
+        if (alive) setApiOk(false);
+      }
+    };
+    ping();
+    const id = setInterval(ping, 15000);
+    return () => {
+      alive = false;
+      clearInterval(id);
+    };
+  }, []);
 
   return (
     <div className="min-h-screen flex bg-[#F3F4F6]">
@@ -29,6 +50,14 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             vai<span className="text-[#FFC107]">já</span>
           </span>
           <p className="text-xs text-white/60 mt-1">Painel Admin</p>
+          <p className="mt-3 inline-flex items-center gap-2 text-[11px] font-semibold rounded-full bg-white/10 px-2.5 py-1">
+            <span
+              className={`w-2 h-2 rounded-full ${
+                apiOk == null ? "bg-white/40" : apiOk ? "bg-[#22C55E]" : "bg-[#EF4444]"
+              }`}
+            />
+            {apiOk == null ? "Checando API…" : apiOk ? "API online" : "API offline"}
+          </p>
         </div>
         <nav className="flex-1 space-y-1">
           {NAV.map((item) => {
