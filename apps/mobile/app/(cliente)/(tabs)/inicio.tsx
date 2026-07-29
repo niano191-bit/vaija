@@ -120,15 +120,10 @@ export default function InicioScreen() {
             <Pressable
               key={c.id}
               style={styles.catCard}
-              onPress={() => {
+              onPress={async () => {
+                const origin = await getCurrentPlace();
                 setBooking({
-                  origin: {
-                    id: "meu-local",
-                    label: "Meu local",
-                    address: "Localização atual",
-                    lat: -23.55,
-                    lng: -46.63,
-                  },
+                  origin,
                   category: c.id as any,
                 });
                 router.push("/(cliente)/destino");
