@@ -43,13 +43,18 @@ export default function LoginPage() {
         <label className="block text-sm font-semibold text-gray-600 mb-1">Senha</label>
         <input
           type="password"
-          className="w-full mb-6 h-11 rounded-xl border border-gray-200 px-3 bg-gray-50"
+          className="w-full mb-4 h-11 rounded-xl border border-gray-200 px-3 bg-gray-50"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
         />
+        <div className="mb-6 rounded-xl bg-[#F3F4F6] p-3 text-xs text-gray-600">
+          Demo: <strong>admin@vaija.com</strong> / <strong>123456</strong>
+          <br />
+          App cliente/motorista: localhost:8083
+        </div>
         <button
           disabled={loading}
-          className="w-full h-12 rounded-xl bg-[#FFC107] text-[#0B1F3A] font-bold"
+          className="w-full h-12 rounded-xl bg-[#FFC107] text-[#0B1F3A] font-bold disabled:opacity-60"
         >
           {loading ? "Entrando..." : "Entrar"}
         </button>
