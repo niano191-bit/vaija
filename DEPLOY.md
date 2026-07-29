@@ -30,12 +30,16 @@ git push -u origin main
 
 ## 3. Vercel (Admin + API)
 
+**Status:** GitHub (`niano191-bit/vaija`) ↔ projeto `vaija-admin` conectado. Push em `main` dispara deploy automático. Root Directory: `apps/admin`.
+
+Setup (já feito neste ambiente):
+
 1. Em https://vercel.com/account/settings → **Login Connections** → conecte o **GitHub**
-2. No projeto `vaija-admin`: Settings → Git → Connect → `niano191-bit/vaija` (Root Directory: `apps/admin`)
-   - Ou: https://vercel.com/new → Import do repo GitHub
-2. **Root Directory:** `apps/admin`
-3. Framework: Next.js
-4. Environment Variables:
+2. Instale o GitHub App da Vercel e autorize o repo `vaija`
+3. No projeto `vaija-admin`: Settings → Git → Connect → `niano191-bit/vaija`
+4. **Root Directory:** `apps/admin`
+5. Framework: Next.js
+6. Environment Variables:
 
 | Name | Value |
 |------|--------|
