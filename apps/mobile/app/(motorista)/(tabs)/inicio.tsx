@@ -1,6 +1,6 @@
 import { useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
-import { StyleSheet, Switch, Text, View } from "react-native";
+import { Alert, StyleSheet, Switch, Text, View } from "react-native";
 import { api, formatBRL, type Ride } from "@vaija/shared";
 import { Button, MapPlaceholder, Screen } from "../../../src/components/ui";
 import { useAuth } from "../../../src/store";
@@ -12,6 +12,7 @@ export default function MotoristaInicio() {
   const [online, setOnline] = useState(driver?.online || false);
   const [pending, setPending] = useState<Ride | null>(null);
   const [skippedIds, setSkippedIds] = useState<string[]>([]);
+  const [busy, setBusy] = useState(false);
   const redirectedKey = useRef<string | null>(null);
 
   useEffect(() => {
@@ -39,7 +40,9 @@ export default function MotoristaInicio() {
             router.replace("/(motorista)/navegar");
           }
         }
-      } catch {}
+      } catch {
+        // keep polling quietly
+      }
     };
     tick();
     const id = setInterval(tick, 3000);
@@ -47,18 +50,31 @@ export default function MotoristaInicio() {
   }, [token, online, skippedIds]);
 
   const toggle = async (value: boolean) => {
+    const prev = online;
     setOnline(value);
-    const d = await api.setDriverOnline(token!, value);
-    setDriver(d);
+    try {
+      const d = await api.setDriverOnline(token!, value);
+      setDriver(d);
+    } catch (e: any) {
+      setOnline(prev);
+      Alert.alert("Erro", e.message || "Não foi possível alterar o status");
+    }
   };
 
   const accept = async () => {
-    if (!pending) return;
-    const ride = await api.updateRide(token!, pending.id, { status: "aceita" });
-    await setActiveRideId(ride.id);
-    redirectedKey.current = `${ride.id}:${ride.status}`;
-    setPending(null);
-    router.push("/(motorista)/navegar");
+    if (!pending || busy) return;
+    try {
+      setBusy(true);
+      const ride = await api.updateRide(token!, pending.id, { status: "aceita" });
+      await setActiveRideId(ride.id);
+      redirectedKey.current = `${ride.id}:${ride.status}`;
+      setPending(null);
+      router.push("/(motorista)/navegar");
+    } catch (e: any) {
+      Alert.alert("Erro", e.message || "Não foi possível aceitar a corrida");
+    } finally {
+      setBusy(false);
+    }
   };
 
   const refuse = () => {
@@ -92,8 +108,8 @@ export default function MotoristaInicio() {
             </Text>
             <Text style={styles.reqPrice}>{formatBRL(pending.price * 0.8)} estimado</Text>
             <View style={styles.actions}>
-              <Button title="Recusar" variant="outline" style={{ flex: 1 }} onPress={refuse} />
-              <Button title="Aceitar" style={{ flex: 1 }} onPress={accept} />
+              <Button title="Recusar" variant="outline" style={{ flex: 1 }} onPress={refuse} disabled={busy} />
+              <Button title={busy ? "Aceitando..." : "Aceitar"} style={{ flex: 1 }} onPress={accept} loading={busy} />
             </View>
           </View>
         ) : (
