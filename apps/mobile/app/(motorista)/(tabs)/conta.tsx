@@ -3,6 +3,7 @@ import { useCallback, useState } from "react";
 import { Alert, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { api, formatBRL } from "@vaija/shared";
 import { Button, Screen } from "../../../src/components/ui";
+import { loadJson, saveJson } from "../../../src/prefs";
 import { useAuth } from "../../../src/store";
 import { theme } from "../../../src/theme";
 
@@ -13,6 +14,8 @@ const DOC_ITEMS = [
   { id: "antecedentes", label: "Antecedentes criminais" },
 ] as const;
 
+const DOCS_KEY = "vaija_driver_docs_sent";
+
 export default function MotoristaConta() {
   const router = useRouter();
   const { user, driver, token, logout, setUser, setDriver } = useAuth();
@@ -20,11 +23,14 @@ export default function MotoristaConta() {
   const [name, setName] = useState(user?.name || "");
   const [phone, setPhone] = useState(user?.phone || "");
   const [saving, setSaving] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [sentDocs, setSentDocs] = useState<string[]>([]);
 
   useFocusEffect(
     useCallback(() => {
       setName(user?.name || "");
       setPhone(user?.phone || "");
+      loadJson<string[]>(DOCS_KEY, []).then(setSentDocs);
       if (!token) return;
       api
         .getDrivers(token)
@@ -48,6 +54,42 @@ export default function MotoristaConta() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const markDoc = async (id: string) => {
+    if (approved) return;
+    const next = sentDocs.includes(id) ? sentDocs.filter((d) => d !== id) : [...sentDocs, id];
+    setSentDocs(next);
+    await saveJson(DOCS_KEY, next);
+  };
+
+  const submitDocs = async () => {
+    if (!token || approved) return;
+    if (sentDocs.length === 0) {
+      Alert.alert("Documentos", "Marque pelo menos um documento antes de enviar.");
+      return;
+    }
+    try {
+      setSending(true);
+      const labels = DOC_ITEMS.filter((d) => sentDocs.includes(d.id)).map((d) => d.label);
+      const res = await api.submitDriverDocs(token, labels);
+      Alert.alert(
+        res.alreadyApproved ? "Já aprovado" : "Enviado",
+        res.alreadyApproved
+          ? "Seus documentos já estão aprovados pelo admin."
+          : "Documentos enviados. O admin verá um ticket em Suporte e pode aprovar em Motoristas.",
+      );
+    } catch (e: any) {
+      Alert.alert("Erro", e.message || "Falha ao enviar documentos");
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const statusFor = (id: string) => {
+    if (approved) return { text: "OK", style: styles.ok };
+    if (sentDocs.includes(id)) return { text: "Enviado", style: styles.sent };
+    return { text: "Pendente", style: styles.wait };
   };
 
   return (
@@ -79,16 +121,25 @@ export default function MotoristaConta() {
       </View>
 
       <Text style={styles.section}>Checklist de documentos</Text>
-      {DOC_ITEMS.map((d) => (
-        <View key={d.id} style={styles.docRow}>
-          <Text style={styles.docLabel}>{d.label}</Text>
-          <Text style={[styles.docStatus, approved ? styles.ok : styles.wait]}>
-            {approved ? "OK" : "Pendente"}
-          </Text>
-        </View>
-      ))}
+      {DOC_ITEMS.map((d) => {
+        const st = statusFor(d.id);
+        return (
+          <Pressable key={d.id} style={styles.docRow} onPress={() => markDoc(d.id)} disabled={approved}>
+            <Text style={styles.docLabel}>{d.label}</Text>
+            <Text style={[styles.docStatus, st.style]}>{st.text}</Text>
+          </Pressable>
+        );
+      })}
+      {!approved ? (
+        <Button
+          title={sending ? "Enviando..." : "Enviar para análise"}
+          onPress={submitDocs}
+          loading={sending}
+          style={{ marginTop: 16 }}
+        />
+      ) : null}
       <Text style={styles.hint}>
-        O admin libera o motorista em Motoristas no painel. Carlos já vem aprovado no seed de demo.
+        Toque para marcar como enviado e depois envie para o admin. Carlos já vem aprovado no seed.
       </Text>
 
       <Pressable
@@ -136,6 +187,7 @@ const styles = StyleSheet.create({
   docLabel: { color: theme.colors.navy, fontWeight: "600" },
   docStatus: { fontWeight: "800" },
   ok: { color: theme.colors.green },
+  sent: { color: theme.colors.blue },
   wait: { color: theme.colors.textMuted },
   hint: { marginTop: 12, color: theme.colors.textMuted, fontSize: 12, lineHeight: 18 },
   logout: { color: theme.colors.danger, fontWeight: "700", textAlign: "center" },

@@ -8,6 +8,9 @@ export async function POST(req: Request) {
     const phone = String(body.phone || "");
     const password = String(body.password || "");
     const role = body.role === "motorista" ? "motorista" : "cliente";
+    const referralCode = String(body.referralCode || body.referral || "")
+      .trim()
+      .toUpperCase();
 
     if (!name || !email || !password) return err("Dados incompletos");
 
@@ -46,6 +49,53 @@ export async function POST(req: Request) {
         online: false,
         documents_approved: false,
       });
+    }
+
+    if (referralCode) {
+      const { data: referrer } = await service
+        .from("profiles")
+        .select("id,name")
+        .eq("referral_code", referralCode)
+        .maybeSingle();
+      if (referrer && referrer.id !== created.user.id) {
+        const bonus = 10;
+        const { data: refWallet } = await service
+          .from("wallets")
+          .select("*")
+          .eq("user_id", referrer.id)
+          .maybeSingle();
+        const { data: newWallet } = await service
+          .from("wallets")
+          .select("*")
+          .eq("user_id", created.user.id)
+          .maybeSingle();
+        if (refWallet) {
+          await service
+            .from("wallets")
+            .update({ balance: Number(refWallet.balance) + bonus })
+            .eq("user_id", referrer.id);
+        }
+        if (newWallet) {
+          await service
+            .from("wallets")
+            .update({ balance: Number(newWallet.balance) + bonus })
+            .eq("user_id", created.user.id);
+        }
+        await service.from("transactions").insert([
+          {
+            user_id: referrer.id,
+            type: "credito",
+            amount: bonus,
+            description: `Indicação: ${name}`,
+          },
+          {
+            user_id: created.user.id,
+            type: "credito",
+            amount: bonus,
+            description: `Bônus código ${referralCode}`,
+          },
+        ]);
+      }
     }
 
     const anon = getAnonClient();

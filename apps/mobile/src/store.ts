@@ -50,7 +50,14 @@ type AuthState = {
   activeRideId: string | null;
   hydrate: () => Promise<void>;
   login: (email: string, password: string) => Promise<User>;
-  register: (data: { name: string; email: string; phone: string; password: string; role?: string }) => Promise<User>;
+  register: (data: {
+    name: string;
+    email: string;
+    phone: string;
+    password: string;
+    role?: string;
+    referralCode?: string;
+  }) => Promise<User>;
   logout: () => Promise<void>;
   setBooking: (partial: BookingDraft) => void;
   clearBooking: () => void;

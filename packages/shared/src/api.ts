@@ -54,8 +54,14 @@ export const api = {
       body: { email, password },
     }),
 
-  register: (data: { name: string; email: string; phone: string; password: string; role?: string }) =>
-    request<AuthResponse>("/auth/register", { method: "POST", body: data }),
+  register: (data: {
+    name: string;
+    email: string;
+    phone: string;
+    password: string;
+    role?: string;
+    referralCode?: string;
+  }) => request<AuthResponse>("/auth/register", { method: "POST", body: data }),
 
   me: (token: string) => request<User>("/auth/me", { token }),
 
@@ -134,6 +140,13 @@ export const api = {
     request<DriverProfile>(`/drivers/${userId}/approve`, {
       method: "POST",
       body: { approved },
+      token,
+    }),
+
+  submitDriverDocs: (token: string, docs: string[]) =>
+    request<{ submitted: boolean; alreadyApproved: boolean }>("/drivers/docs", {
+      method: "POST",
+      body: { docs },
       token,
     }),
 

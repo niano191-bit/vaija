@@ -12,6 +12,7 @@ export default function RegisterScreen() {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
+  const [referralCode, setReferralCode] = useState("");
   const [asDriver, setAsDriver] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -28,6 +29,7 @@ export default function RegisterScreen() {
         phone,
         password,
         role: asDriver ? "motorista" : "cliente",
+        referralCode: referralCode.trim() || undefined,
       });
       if (user.role === "motorista") {
         Alert.alert(
@@ -35,7 +37,15 @@ export default function RegisterScreen() {
           "Perfil de motorista criado. O admin precisa aprovar os documentos antes da operação plena.",
         );
         router.replace("/(motorista)/(tabs)/inicio");
-      } else router.replace("/(cliente)/(tabs)/inicio");
+      } else {
+        Alert.alert(
+          "Conta criada",
+          referralCode.trim()
+            ? "Bem-vindo! Se o código for válido, R$ 10 foram creditados na carteira."
+            : "Bem-vindo à vaijá!",
+        );
+        router.replace("/(cliente)/(tabs)/inicio");
+      }
     } catch (e: any) {
       Alert.alert("Erro", e.message || "Falha no cadastro");
     } finally {
@@ -52,6 +62,13 @@ export default function RegisterScreen() {
         <Input label="E-mail" value={email} onChangeText={setEmail} placeholder="seu@email.com" />
         <Input label="Telefone" value={phone} onChangeText={setPhone} placeholder="(11) 99999-9999" />
         <Input label="Senha" value={password} onChangeText={setPassword} secureTextEntry />
+        <Input
+          label="Código de indicação (opcional)"
+          value={referralCode}
+          onChangeText={setReferralCode}
+          placeholder="Ex: LUCAS10"
+          autoCapitalize="characters"
+        />
         <Pressable onPress={() => setAsDriver((v) => !v)} style={styles.role}>
           <View style={[styles.check, asDriver && styles.checkOn]} />
           <Text style={styles.roleText}>Quero ser motorista</Text>
