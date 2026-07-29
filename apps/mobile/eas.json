@@ -14,7 +14,8 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://vaija-admin.vercel.app/api"
+        "EXPO_PUBLIC_API_URL": "https://vaija-admin.vercel.app/api",
+        "EXPO_NO_METRO_WORKSPACE_ROOT": "1"
       }
     },
     "production": {
@@ -22,7 +23,8 @@
         "buildType": "app-bundle"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://vaija-admin.vercel.app/api"
+        "EXPO_PUBLIC_API_URL": "https://vaija-admin.vercel.app/api",
+        "EXPO_NO_METRO_WORKSPACE_ROOT": "1"
       }
     }
   },

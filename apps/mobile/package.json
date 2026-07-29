@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.2",
-    "@vaija/shared": "workspace:*",
+    "@vaija/shared": "file:./vendor/shared",
     "babel-preset-expo": "^57.0.4",
     "expo": "~57.0.8",
     "expo-constants": "~57.0.7",
