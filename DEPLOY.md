@@ -30,7 +30,9 @@ git push -u origin main
 
 ## 3. Vercel (Admin + API)
 
-1. https://vercel.com/new → Import do repo GitHub
+1. Em https://vercel.com/account/settings → **Login Connections** → conecte o **GitHub**
+2. No projeto `vaija-admin`: Settings → Git → Connect → `niano191-bit/vaija` (Root Directory: `apps/admin`)
+   - Ou: https://vercel.com/new → Import do repo GitHub
 2. **Root Directory:** `apps/admin`
 3. Framework: Next.js
 4. Environment Variables:
