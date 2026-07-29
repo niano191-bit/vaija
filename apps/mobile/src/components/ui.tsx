@@ -171,8 +171,11 @@ export function MapPlaceholder({
   lng?: number;
 }) {
   const delta = route ? 0.035 : 0.02;
-  const bbox = `${lng - delta},${lat - delta},${lng + delta},${lat + delta}`;
-  const osmSrc = `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${lat}%2C${lng}`;
+  // Round coords so tiny float noise doesn't reload the iframe
+  const rLat = Math.round(lat * 1e4) / 1e4;
+  const rLng = Math.round(lng * 1e4) / 1e4;
+  const bbox = `${rLng - delta},${rLat - delta},${rLng + delta},${rLat + delta}`;
+  const osmSrc = `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${rLat}%2C${rLng}`;
 
   if (Platform.OS === "web") {
     return (
@@ -181,7 +184,7 @@ export function MapPlaceholder({
         <iframe
           title={label}
           src={osmSrc}
-          style={{ border: 0, width: "100%", height: "100%" }}
+          style={{ border: 0, width: "100%", height: "100%", pointerEvents: "none" }}
         />
         <Text style={styles.mapLabel}>{label}</Text>
       </View>

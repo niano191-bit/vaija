@@ -1,5 +1,5 @@
 import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { StyleSheet, Switch, Text, View } from "react-native";
 import { api, formatBRL, type Ride } from "@vaija/shared";
 import { Button, MapPlaceholder, Screen } from "../../../src/components/ui";
@@ -12,6 +12,7 @@ export default function MotoristaInicio() {
   const [online, setOnline] = useState(driver?.online || false);
   const [pending, setPending] = useState<Ride | null>(null);
   const [skippedIds, setSkippedIds] = useState<string[]>([]);
+  const redirectedKey = useRef<string | null>(null);
 
   useEffect(() => {
     if (!token) return;
@@ -19,9 +20,9 @@ export default function MotoristaInicio() {
       try {
         const ride = await api.getPendingRide(token);
         if (ride && ride.status === "solicitada" && online && !skippedIds.includes(ride.id)) {
-          setPending(ride);
+          setPending((prev) => (prev?.id === ride.id ? prev : ride));
         } else {
-          setPending(null);
+          setPending((prev) => (prev ? null : prev));
         }
         const active = await api.getRides(token, {
           mine: true,
@@ -29,6 +30,9 @@ export default function MotoristaInicio() {
         });
         if (active[0]) {
           setActiveRideId(active[0].id);
+          const key = `${active[0].id}:${active[0].status}`;
+          if (redirectedKey.current === key) return;
+          redirectedKey.current = key;
           if (active[0].status === "em_andamento") {
             router.replace("/(motorista)/em-andamento");
           } else if (["aceita", "a_caminho"].includes(active[0].status)) {
@@ -38,7 +42,7 @@ export default function MotoristaInicio() {
       } catch {}
     };
     tick();
-    const id = setInterval(tick, 2000);
+    const id = setInterval(tick, 3000);
     return () => clearInterval(id);
   }, [token, online, skippedIds]);
 

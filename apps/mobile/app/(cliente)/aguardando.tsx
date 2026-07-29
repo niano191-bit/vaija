@@ -1,5 +1,5 @@
 import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { api, type Ride } from "@vaija/shared";
@@ -11,22 +11,33 @@ export default function AguardandoScreen() {
   const router = useRouter();
   const { token, activeRideId, setActiveRideId } = useAuth();
   const [ride, setRide] = useState<Ride | null>(null);
+  const navKey = useRef<string | null>(null);
 
   useEffect(() => {
     if (!token || !activeRideId) return;
     const tick = () => {
-      api.getRide(token, activeRideId).then((r) => {
-        setRide(r);
-        if (r.status === "em_andamento") router.replace("/(cliente)/corrida");
-        else if (r.status === "concluida") router.replace("/(cliente)/concluida");
-        else if (r.status === "cancelada") {
-          setActiveRideId(null);
-          router.replace("/(cliente)/(tabs)/inicio");
-        }
-      }).catch(() => {});
+      api
+        .getRide(token, activeRideId)
+        .then((r) => {
+          setRide((prev) => (prev?.id === r.id && prev.status === r.status && prev.driverName === r.driverName ? prev : r));
+          const key = `${r.id}:${r.status}`;
+          if (navKey.current === key) return;
+          if (r.status === "em_andamento") {
+            navKey.current = key;
+            router.replace("/(cliente)/corrida");
+          } else if (r.status === "concluida") {
+            navKey.current = key;
+            router.replace("/(cliente)/concluida");
+          } else if (r.status === "cancelada") {
+            navKey.current = key;
+            setActiveRideId(null);
+            router.replace("/(cliente)/(tabs)/inicio");
+          }
+        })
+        .catch(() => {});
     };
     tick();
-    const id = setInterval(tick, 2000);
+    const id = setInterval(tick, 3000);
     return () => clearInterval(id);
   }, [token, activeRideId]);
 

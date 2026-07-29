@@ -1,5 +1,5 @@
 import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Alert, Pressable, Share, StyleSheet, Text, View } from "react-native";
 import { api, type Ride } from "@vaija/shared";
 import { MapPlaceholder, Screen } from "../../src/components/ui";
@@ -10,21 +10,27 @@ export default function CorridaScreen() {
   const router = useRouter();
   const { token, activeRideId, setActiveRideId } = useAuth();
   const [ride, setRide] = useState<Ride | null>(null);
+  const navKey = useRef<string | null>(null);
 
   useEffect(() => {
     if (!token || !activeRideId) return;
     const tick = () => {
       api.getRide(token, activeRideId).then((r) => {
-        setRide(r);
-        if (r.status === "concluida") router.replace("/(cliente)/concluida");
-        if (r.status === "cancelada") {
+        setRide((prev) => (prev?.id === r.id && prev.status === r.status ? prev : r));
+        const key = `${r.id}:${r.status}`;
+        if (navKey.current === key) return;
+        if (r.status === "concluida") {
+          navKey.current = key;
+          router.replace("/(cliente)/concluida");
+        } else if (r.status === "cancelada") {
+          navKey.current = key;
           setActiveRideId(null);
           router.replace("/(cliente)/(tabs)/inicio");
         }
       });
     };
     tick();
-    const id = setInterval(tick, 2000);
+    const id = setInterval(tick, 3000);
     return () => clearInterval(id);
   }, [token, activeRideId]);
 
