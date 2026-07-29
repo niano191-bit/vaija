@@ -75,6 +75,11 @@ export const api = {
   selectPayment: (token: string, methodId: string) =>
     request<Wallet>("/wallet/select", { method: "POST", body: { methodId }, token }),
 
+  addPaymentMethod: (
+    token: string,
+    data: { type: "pix" | "visa" | "mastercard"; label?: string; selected?: boolean }
+  ) => request<Wallet>("/wallet/methods", { method: "POST", body: data, token }),
+
   addBalance: (token: string, amount: number) =>
     request<Wallet>("/wallet/add", { method: "POST", body: { amount }, token }),
 

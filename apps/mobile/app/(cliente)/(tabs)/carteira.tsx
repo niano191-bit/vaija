@@ -50,16 +50,36 @@ export default function CarteiraScreen() {
     }
   };
 
-  const pickByType = (kind: "pix" | "card") => {
+  const pickByType = async (kind: "pix" | "card") => {
     if (kind === "pix") {
       const pix = wallet?.methods?.find((m) => m.type === "pix");
       if (pix) return select(pix.id);
-      Alert.alert("PIX", "Nenhuma chave PIX cadastrada nesta demo.");
+      try {
+        const w = await api.addPaymentMethod(token, {
+          type: "pix",
+          label: "PIX",
+          selected: true,
+        });
+        setWallet(w);
+        Alert.alert("PIX", "Chave PIX adicionada e definida como padrão.");
+      } catch (e: any) {
+        Alert.alert("Erro", e.message || "Falha ao adicionar PIX");
+      }
       return;
     }
     const card = wallet?.methods?.find((m) => m.type === "visa" || m.type === "mastercard");
     if (card) return select(card.id);
-    Alert.alert("Cartões", "Nenhum cartão cadastrado nesta demo.");
+    try {
+      const w = await api.addPaymentMethod(token, {
+        type: "visa",
+        label: "Visa •••• 4242",
+        selected: true,
+      });
+      setWallet(w);
+      Alert.alert("Cartão", "Cartão Visa adicionado e definido como padrão.");
+    } catch (e: any) {
+      Alert.alert("Erro", e.message || "Falha ao adicionar cartão");
+    }
   };
 
   return (
@@ -115,7 +135,7 @@ export default function CarteiraScreen() {
             <Text style={styles.empty}>{error ? "—" : "Nenhuma forma cadastrada."}</Text>
           )}
         </View>
-        <Text style={styles.add}>Toque em um método para selecionar como padrão.</Text>
+        <Text style={styles.add}>Toque em um método para selecionar como padrão. PIX/Cartões cadastram se ainda não existirem.</Text>
       </ScrollView>
     </Screen>
   );
