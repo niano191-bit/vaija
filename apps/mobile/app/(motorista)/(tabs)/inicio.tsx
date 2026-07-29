@@ -11,13 +11,14 @@ export default function MotoristaInicio() {
   const { token, user, driver, setDriver, setActiveRideId, activeRideId } = useAuth();
   const [online, setOnline] = useState(driver?.online || false);
   const [pending, setPending] = useState<Ride | null>(null);
+  const [skippedIds, setSkippedIds] = useState<string[]>([]);
 
   useEffect(() => {
     if (!token) return;
     const tick = async () => {
       try {
         const ride = await api.getPendingRide(token);
-        if (ride && ride.status === "solicitada" && online) {
+        if (ride && ride.status === "solicitada" && online && !skippedIds.includes(ride.id)) {
           setPending(ride);
         } else {
           setPending(null);
@@ -39,7 +40,7 @@ export default function MotoristaInicio() {
     tick();
     const id = setInterval(tick, 2000);
     return () => clearInterval(id);
-  }, [token, online]);
+  }, [token, online, skippedIds]);
 
   const toggle = async (value: boolean) => {
     setOnline(value);
@@ -55,7 +56,11 @@ export default function MotoristaInicio() {
     router.push("/(motorista)/navegar");
   };
 
-  const refuse = () => setPending(null);
+  const refuse = () => {
+    if (!pending) return;
+    setSkippedIds((ids) => [...ids, pending.id]);
+    setPending(null);
+  };
 
   return (
     <Screen>

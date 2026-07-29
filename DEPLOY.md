@@ -40,7 +40,7 @@ git push -u origin main
 | `NEXT_PUBLIC_SUPABASE_URL` | URL do Supabase |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | anon key |
 | `SUPABASE_SERVICE_ROLE_KEY` | service_role key |
-| `NEXT_PUBLIC_API_URL` | `https://seu-app.vercel.app` (após o 1º deploy, atualize) |
+| `NEXT_PUBLIC_API_URL` | `https://vaija-admin.vercel.app/api` (ou `/api` no mesmo deploy) |
 
 5. Deploy
 
@@ -60,11 +60,13 @@ vercel --prod
 Em `apps/mobile/.env`:
 
 ```
-EXPO_PUBLIC_API_URL=https://seu-app.vercel.app
+EXPO_PUBLIC_API_URL=https://vaija-admin.vercel.app/api
 EXPO_NO_METRO_WORKSPACE_ROOT=1
 ```
 
-Health check: `GET https://seu-app.vercel.app/api/health`
+> Inclua o sufixo `/api`. Sem ele o app chama `/auth/login` em vez de `/api/auth/login`.
+
+Health check: `GET https://vaija-admin.vercel.app/api/health`
 
 ## Arquitetura
 

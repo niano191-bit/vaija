@@ -1,6 +1,6 @@
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { api, type Ride } from "@vaija/shared";
 import { Button, MapPlaceholder, Screen } from "../../src/components/ui";
@@ -64,9 +64,22 @@ export default function AguardandoScreen() {
         )}
 
         <View style={styles.actions}>
-          <Button title="Mensagem" variant="secondary" style={{ flex: 1 }} onPress={() => Alert.alert("Mensagem", "Chat demo")} />
-          <Button title="Ligar" variant="outline" style={{ flex: 1 }} onPress={() => Alert.alert("Ligar", ride?.driverName || "Motorista")} />
+          <Button
+            title="Mensagem"
+            variant="secondary"
+            style={{ flex: 1, opacity: 0.55 }}
+            disabled
+            onPress={() => {}}
+          />
+          <Button
+            title="Ligar"
+            variant="outline"
+            style={{ flex: 1, opacity: 0.55 }}
+            disabled
+            onPress={() => {}}
+          />
         </View>
+        <Text style={styles.hint}>Chat e ligação entram na próxima versão</Text>
         <Pressable onPress={cancel}>
           <Text style={styles.cancel}>Cancelar corrida</Text>
         </Pressable>
@@ -101,5 +114,6 @@ const styles = StyleSheet.create({
   meta: { color: theme.colors.textMuted, fontSize: 12, marginTop: 2 },
   plate: { fontWeight: "700", color: theme.colors.navy, marginTop: 2 },
   actions: { flexDirection: "row", gap: 10, marginTop: 20 },
+  hint: { color: theme.colors.textMuted, textAlign: "center", marginTop: 8, fontSize: 12 },
   cancel: { color: theme.colors.danger, textAlign: "center", marginTop: 16, fontWeight: "700" },
 });

@@ -7,6 +7,8 @@ export async function GET(req: Request) {
   const supabase = getServiceClient();
 
   const activeStatuses = ["solicitada", "aceita", "a_caminho", "em_andamento"];
+  const startOfDay = new Date();
+  startOfDay.setHours(0, 0, 0, 0);
   const [
     { count: activeRides },
     { data: taxas },
@@ -17,7 +19,11 @@ export async function GET(req: Request) {
     { count: totalDrivers },
   ] = await Promise.all([
     supabase.from("rides").select("*", { count: "exact", head: true }).in("status", activeStatuses),
-    supabase.from("transactions").select("amount").eq("type", "taxa"),
+    supabase
+      .from("transactions")
+      .select("amount")
+      .eq("type", "taxa")
+      .gte("created_at", startOfDay.toISOString()),
     supabase.from("drivers").select("*", { count: "exact", head: true }).eq("online", true),
     supabase.from("sos_alerts").select("*", { count: "exact", head: true }).eq("status", "aberto"),
     supabase.from("support_tickets").select("*", { count: "exact", head: true }).neq("status", "resolvido"),

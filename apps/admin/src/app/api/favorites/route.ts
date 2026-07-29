@@ -26,11 +26,16 @@ export async function POST(req: Request) {
   if (!auth) return err("Não autorizado", 401);
   const place = await req.json();
   const supabase = getServiceClient();
+  let placeId: string | null = null;
+  if (place.id) {
+    const { data: known } = await supabase.from("places").select("id").eq("id", place.id).maybeSingle();
+    if (known) placeId = known.id;
+  }
   const { data, error } = await supabase
     .from("favorites")
     .insert({
       user_id: auth.profile.id,
-      place_id: place.id || null,
+      place_id: placeId,
       label: place.label,
       address: place.address,
       lat: place.lat,

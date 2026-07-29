@@ -1,13 +1,13 @@
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { type Place } from "@vaija/shared";
+import { api, type Favorite, type Place } from "@vaija/shared";
 import { Screen, Title } from "../../src/components/ui";
 import { useAuth } from "../../src/store";
 import { theme } from "../../src/theme";
 
-const SAVED: Place[] = [
+const FALLBACK_SAVED: Place[] = [
   { id: "p-home", label: "Casa", address: "Rua das Flores, 120 — Pinheiros", lat: -23.5615, lng: -46.691, icon: "home" },
   { id: "p-work", label: "Trabalho", address: "Av. Paulista, 1000", lat: -23.5614, lng: -46.6559, icon: "work" },
   { id: "p-airport", label: "Aeroporto", address: "Congonhas — SP", lat: -23.6261, lng: -46.6566, icon: "airport" },
@@ -20,13 +20,33 @@ const RECENT: Place[] = [
 
 export default function DestinoScreen() {
   const router = useRouter();
-  const { booking, setBooking } = useAuth();
+  const { token, booking, setBooking } = useAuth();
   const [query, setQuery] = useState(booking.destination?.label || "");
+  const [favorites, setFavorites] = useState<Favorite[]>([]);
+
+  useEffect(() => {
+    if (!token) return;
+    api.getFavorites(token).then(setFavorites).catch(() => {});
+  }, [token]);
+
+  const saved = useMemo(() => {
+    if (favorites.length) {
+      return favorites.map((f) => f.place);
+    }
+    return FALLBACK_SAVED;
+  }, [favorites]);
 
   const select = (place: Place) => {
     setBooking({ destination: place });
     router.push("/(cliente)/categoria");
   };
+
+  const filteredRecent = RECENT.filter(
+    (p) => !query || p.label.toLowerCase().includes(query.toLowerCase()),
+  );
+  const filteredSaved = saved.filter(
+    (p) => !query || p.label.toLowerCase().includes(query.toLowerCase()) || p.address.toLowerCase().includes(query.toLowerCase()),
+  );
 
   return (
     <Screen style={{ paddingTop: 52 }}>
@@ -52,7 +72,7 @@ export default function DestinoScreen() {
       </View>
       <ScrollView contentContainerStyle={{ padding: 20, gap: 8 }}>
         <Text style={styles.section}>Salvos</Text>
-        {SAVED.map((p) => (
+        {filteredSaved.map((p) => (
           <Pressable key={p.id} style={styles.row} onPress={() => select(p)}>
             <Ionicons name="bookmark-outline" size={18} color={theme.colors.navy} />
             <View>
@@ -62,7 +82,7 @@ export default function DestinoScreen() {
           </Pressable>
         ))}
         <Text style={[styles.section, { marginTop: 12 }]}>Recentes</Text>
-        {RECENT.filter((p) => !query || p.label.toLowerCase().includes(query.toLowerCase())).map((p) => (
+        {filteredRecent.map((p) => (
           <Pressable key={p.id} style={styles.row} onPress={() => select(p)}>
             <Ionicons name="time-outline" size={18} color={theme.colors.navy} />
             <View>

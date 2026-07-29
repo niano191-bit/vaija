@@ -29,15 +29,18 @@ export default function FavoritosScreen() {
         </View>
         <Pressable
           onPress={async () => {
-            await api.addFavorite(token, {
-              id: `p-${Date.now()}`,
-              label: "Novo local",
-              address: "Endereço salvo",
-              lat: -23.55,
-              lng: -46.63,
-            });
-            const favs = await api.getFavorites(token);
-            setList(favs);
+            try {
+              await api.addFavorite(token, {
+                id: `custom-${Date.now()}`,
+                label: "Novo local",
+                address: "Endereço salvo na conta",
+                lat: -23.55,
+                lng: -46.63,
+              });
+              setList(await api.getFavorites(token));
+            } catch {
+              // ignore
+            }
           }}
         >
           <Text style={styles.add}>+ Adicionar</Text>

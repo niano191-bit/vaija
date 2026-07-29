@@ -4,7 +4,9 @@ Monorepo: **Cliente + Motorista** (Expo) · **Admin + API** (Next.js na Vercel) 
 
 ## Deploy (produção)
 
-Siga o guia completo: **[DEPLOY.md](DEPLOY.md)**
+- Admin/API: https://vaija-admin.vercel.app  
+- Health: https://vaija-admin.vercel.app/api/health  
+- Guia completo: **[DEPLOY.md](DEPLOY.md)**
 
 ## Dev local
 
@@ -21,10 +23,11 @@ NEXT_PUBLIC_API_URL=/api
 3. Em `apps/mobile/.env`:
 
 ```
-EXPO_PUBLIC_API_URL=http://localhost:3000/api
+# Produção (recomendado na demo):
+EXPO_PUBLIC_API_URL=https://vaija-admin.vercel.app/api
+# Ou local: http://localhost:3000/api
 EXPO_NO_METRO_WORKSPACE_ROOT=1
 ```
-
 4. Rode:
 
 ```bash
