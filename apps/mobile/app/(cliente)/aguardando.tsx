@@ -2,8 +2,9 @@ import { useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { Alert, Linking, Pressable, StyleSheet, Text, View } from "react-native";
 import { api, type Ride } from "@vaija/shared";
+import { RideChatModal } from "../../src/components/RideChatModal";
 import { Button, MapPlaceholder, Screen } from "../../src/components/ui";
-import { sendQuickRideMessage, watchRideMessages } from "../../src/rideChat";
+import { watchRideMessages } from "../../src/rideChat";
 import { useAuth } from "../../src/store";
 import { theme } from "../../src/theme";
 
@@ -19,6 +20,7 @@ export default function AguardandoScreen() {
   const { token, user, activeRideId, setActiveRideId } = useAuth();
   const [ride, setRide] = useState<Ride | null>(null);
   const [busy, setBusy] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
   const navKey = useRef<string | null>(null);
   const seenMsgs = useRef({ seen: new Set<string>(), primed: false });
 
@@ -48,16 +50,19 @@ export default function AguardandoScreen() {
           }
         })
         .catch(() => {});
-      if (user?.id) {
+      if (user?.id && !chatOpen) {
         watchRideMessages(token, activeRideId, user.id, seenMsgs.current, (text, fromName) => {
-          Alert.alert(`Mensagem de ${fromName}`, text);
+          Alert.alert(`Mensagem de ${fromName}`, text, [
+            { text: "OK" },
+            { text: "Abrir chat", onPress: () => setChatOpen(true) },
+          ]);
         });
       }
     };
     tick();
     const id = setInterval(tick, 3000);
     return () => clearInterval(id);
-  }, [token, activeRideId, user?.id]);
+  }, [token, activeRideId, user?.id, chatOpen]);
 
   const cancel = async () => {
     if (!ride || busy) return;
@@ -78,7 +83,7 @@ export default function AguardandoScreen() {
       Alert.alert("Aguarde", "Assim que um motorista aceitar, você poderá enviar mensagem.");
       return;
     }
-    sendQuickRideMessage(token, ride.id, ride.driverName, ["Estou aqui", "Já estou saindo"]);
+    setChatOpen(true);
   };
 
   const callDriver = async () => {
@@ -142,6 +147,17 @@ export default function AguardandoScreen() {
           <Text style={[styles.cancel, busy && { opacity: 0.5 }]}>{busy ? "Cancelando..." : "Cancelar corrida"}</Text>
         </Pressable>
       </View>
+      {ride && user && token ? (
+        <RideChatModal
+          visible={chatOpen}
+          onClose={() => setChatOpen(false)}
+          token={token}
+          rideId={ride.id}
+          myUserId={user.id}
+          peerName={ride.driverName || "Motorista"}
+          quickReplies={["Estou aqui", "Já estou saindo"]}
+        />
+      ) : null}
     </Screen>
   );
 }

@@ -115,6 +115,7 @@ export const api = {
       category: VehicleCategory;
       couponCode?: string;
       paymentMethod?: string;
+      distanceKm?: number;
     }
   ) => request<Ride>("/rides", { method: "POST", body: data, token }),
 

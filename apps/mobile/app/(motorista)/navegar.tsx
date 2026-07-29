@@ -2,8 +2,9 @@ import { useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
 import { api, type Ride } from "@vaija/shared";
+import { RideChatModal } from "../../src/components/RideChatModal";
 import { Button, MapPlaceholder, Screen } from "../../src/components/ui";
-import { sendQuickRideMessage, watchRideMessages } from "../../src/rideChat";
+import { watchRideMessages } from "../../src/rideChat";
 import { useAuth } from "../../src/store";
 import { theme } from "../../src/theme";
 
@@ -12,6 +13,7 @@ export default function NavegarScreen() {
   const { token, user, activeRideId, setActiveRideId } = useAuth();
   const [ride, setRide] = useState<Ride | null>(null);
   const [busy, setBusy] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
   const navKey = useRef<string | null>(null);
   const seenMsgs = useRef({ seen: new Set<string>(), primed: false });
 
@@ -43,9 +45,12 @@ export default function NavegarScreen() {
             : current,
         );
 
-        if (user?.id) {
+        if (user?.id && !chatOpen) {
           watchRideMessages(token, current.id, user.id, seenMsgs.current, (text, fromName) => {
-            Alert.alert(`Mensagem de ${fromName}`, text);
+            Alert.alert(`Mensagem de ${fromName}`, text, [
+              { text: "OK" },
+              { text: "Abrir chat", onPress: () => setChatOpen(true) },
+            ]);
           });
         }
 
@@ -63,7 +68,7 @@ export default function NavegarScreen() {
     load();
     const id = setInterval(load, 3000);
     return () => clearInterval(id);
-  }, [token, activeRideId, user?.id]);
+  }, [token, activeRideId, user?.id, chatOpen]);
 
   const arrived = async () => {
     if (!ride || busy) return;
@@ -81,11 +86,7 @@ export default function NavegarScreen() {
 
   const messageClient = () => {
     if (!ride || !token) return;
-    sendQuickRideMessage(token, ride.id, ride.clientName || "Passageiro", [
-      "Chegando",
-      "Estou no local",
-      "Onde você está?",
-    ]);
+    setChatOpen(true);
   };
 
   const mapLat = ride?.origin.lat ?? -23.55;
@@ -137,6 +138,17 @@ export default function NavegarScreen() {
           <Text style={[styles.cancel, busy && { opacity: 0.5 }]}>Cancelar corrida</Text>
         </Pressable>
       </View>
+      {ride && user && token ? (
+        <RideChatModal
+          visible={chatOpen}
+          onClose={() => setChatOpen(false)}
+          token={token}
+          rideId={ride.id}
+          myUserId={user.id}
+          peerName={ride.clientName || "Passageiro"}
+          quickReplies={["Chegando", "Estou no local", "Onde você está?"]}
+        />
+      ) : null}
     </Screen>
   );
 }

@@ -1,9 +1,10 @@
 import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { api, formatBRL, type CategoryQuote } from "@vaija/shared";
 import { Button, Screen, Title } from "../../src/components/ui";
+import { distanceKm } from "../../src/geo";
 import { useAuth } from "../../src/store";
 import { theme } from "../../src/theme";
 
@@ -14,14 +15,22 @@ export default function CategoriaScreen() {
   const [selected, setSelected] = useState(booking.category || "economico");
   const [payment, setPayment] = useState("PIX");
 
+  const km = useMemo(() => {
+    if (!booking.origin || !booking.destination) return 5;
+    return Math.max(1, distanceKm(booking.origin, booking.destination));
+  }, [booking.origin, booking.destination]);
+
   useEffect(() => {
     if (!token) return;
-    api.getCategories(token).then(setCategories).catch(() => {});
-    api.getWallet(token).then((w) => {
-      const m = w.methods.find((x) => x.selected);
-      if (m) setPayment(m.label);
-    }).catch(() => {});
-  }, [token]);
+    api.getCategories(token, km).then(setCategories).catch(() => {});
+    api
+      .getWallet(token)
+      .then((w) => {
+        const m = w.methods.find((x) => x.selected);
+        if (m) setPayment(m.label);
+      })
+      .catch(() => {});
+  }, [token, km]);
 
   const current = categories.find((c) => c.id === selected);
 
@@ -32,7 +41,9 @@ export default function CategoriaScreen() {
           <Ionicons name="arrow-back" size={24} color={theme.colors.navy} />
         </Pressable>
         <Title style={{ marginTop: 12 }}>Escolha uma categoria</Title>
-        <Text style={styles.dest}>Para: {booking.destination?.label}</Text>
+        <Text style={styles.dest}>
+          Para: {booking.destination?.label} · ~{km.toFixed(1)} km
+        </Text>
       </View>
       <ScrollView contentContainerStyle={{ padding: 20, gap: 10 }}>
         {categories.map((c) => (
@@ -44,7 +55,9 @@ export default function CategoriaScreen() {
             <Ionicons name="car-sport" size={28} color={theme.colors.navy} />
             <View style={{ flex: 1 }}>
               <Text style={styles.name}>{c.name}</Text>
-              <Text style={styles.meta}>{c.capacity} passageiros · {c.etaMin} min</Text>
+              <Text style={styles.meta}>
+                {c.capacity} passageiros · {c.etaMin} min
+              </Text>
             </View>
             <Text style={styles.price}>{formatBRL(c.price)}</Text>
             <View style={[styles.check, selected === c.id && styles.checkOn]} />

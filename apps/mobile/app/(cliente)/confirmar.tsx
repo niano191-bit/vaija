@@ -1,9 +1,10 @@
 import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Alert, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { api, formatBRL, type CategoryQuote } from "@vaija/shared";
 import { Button, Screen, Title } from "../../src/components/ui";
+import { distanceKm } from "../../src/geo";
 import { useAuth } from "../../src/store";
 import { theme } from "../../src/theme";
 
@@ -15,12 +16,17 @@ export default function ConfirmarScreen() {
   const [discount, setDiscount] = useState(0);
   const [loading, setLoading] = useState(false);
 
+  const km = useMemo(() => {
+    if (!booking.origin || !booking.destination) return 5;
+    return Math.max(1, distanceKm(booking.origin, booking.destination));
+  }, [booking.origin, booking.destination]);
+
   useEffect(() => {
     if (!token) return;
-    api.getCategories(token).then((cats) => {
+    api.getCategories(token, km).then((cats) => {
       setQuote(cats.find((c) => c.id === booking.category) || cats[0]);
     });
-  }, [token, booking.category]);
+  }, [token, booking.category, km]);
 
   const price = quote ? +(quote.price * (1 - discount / 100)).toFixed(2) : 0;
   const fee = 2.5;
@@ -50,6 +56,7 @@ export default function ConfirmarScreen() {
         category: booking.category,
         couponCode: booking.couponCode,
         paymentMethod: booking.paymentMethod,
+        distanceKm: km,
       });
       setActiveRideId(ride.id);
       router.replace("/(cliente)/aguardando");
@@ -71,7 +78,9 @@ export default function ConfirmarScreen() {
         <Text style={styles.from}>{booking.origin?.label}</Text>
         <Ionicons name="arrow-down" size={16} color={theme.colors.textMuted} />
         <Text style={styles.to}>{booking.destination?.label}</Text>
-        <Text style={styles.eta}>Previsão de chegada: {quote?.etaMin || 3} min</Text>
+        <Text style={styles.eta}>
+          ~{km.toFixed(1)} km · previsão {quote?.etaMin || 3} min
+        </Text>
       </View>
 
       <View style={styles.couponRow}>
