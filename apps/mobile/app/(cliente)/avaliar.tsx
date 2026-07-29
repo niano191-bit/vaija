@@ -1,6 +1,6 @@
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { Alert, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { api } from "@vaija/shared";
 import { Button, Screen, Title } from "../../src/components/ui";
 import { useAuth } from "../../src/store";
@@ -22,6 +22,8 @@ export default function AvaliarScreen() {
       setActiveRideId(null);
       clearBooking();
       router.replace("/(cliente)/(tabs)/inicio");
+    } catch (e: any) {
+      Alert.alert("Erro", e.message || "Não foi possível enviar a avaliação");
     } finally {
       setLoading(false);
     }

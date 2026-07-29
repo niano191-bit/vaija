@@ -13,8 +13,15 @@ export default function CuponsPage() {
   const [pct, setPct] = useState(10);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [toggling, setToggling] = useState<string | null>(null);
 
-  const load = () => token && api.getCoupons(token).then(setCoupons).catch(() => {});
+  const load = () => {
+    if (!token) return;
+    api
+      .getCoupons(token)
+      .then(setCoupons)
+      .catch((e: any) => setError(e.message || "Falha ao carregar cupons"));
+  };
 
   useEffect(() => {
     load();
@@ -38,6 +45,19 @@ export default function CuponsPage() {
       setError(err.message || "Falha ao criar cupom");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const toggle = async (c: Coupon) => {
+    setToggling(c.id);
+    setError("");
+    try {
+      await api.updateCoupon(token!, { id: c.id, active: !c.active });
+      load();
+    } catch (err: any) {
+      setError(err.message || "Falha ao atualizar cupom");
+    } finally {
+      setToggling(null);
     }
   };
 
@@ -90,11 +110,17 @@ export default function CuponsPage() {
                 <p className="font-extrabold text-lg">{c.code}</p>
                 <p className="text-sm text-gray-500">{c.description || "Sem descrição"}</p>
               </div>
-              <div className="text-right">
+              <div className="text-right flex flex-col items-end gap-2">
                 <p className="font-bold text-[#1E88E5]">{c.discountPercent}% OFF</p>
-                <p className={`text-xs font-semibold ${c.active ? "text-green-600" : "text-gray-400"}`}>
-                  {c.active ? "Ativo" : "Inativo"}
-                </p>
+                <button
+                  disabled={toggling === c.id}
+                  onClick={() => toggle(c)}
+                  className={`text-xs font-semibold px-3 py-1.5 rounded-lg border ${
+                    c.active ? "text-green-700 border-green-200 bg-green-50" : "text-gray-500 border-gray-200 bg-gray-50"
+                  }`}
+                >
+                  {toggling === c.id ? "…" : c.active ? "Ativo · desativar" : "Inativo · ativar"}
+                </button>
               </div>
             </div>
           ))

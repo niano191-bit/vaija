@@ -56,6 +56,7 @@ type AuthState = {
   clearBooking: () => void;
   setActiveRideId: (id: string | null) => Promise<void> | void;
   setDriver: (driver: DriverProfile | null) => void;
+  setUser: (user: User) => Promise<void> | void;
 };
 
 export const useAuth = create<AuthState>((set, get) => ({
@@ -121,4 +122,14 @@ export const useAuth = create<AuthState>((set, get) => ({
     }
   },
   setDriver: (driver) => set({ driver }),
+  setUser: async (user) => {
+    set({ user });
+    const { token, driver, activeRideId } = get();
+    if (token && user) {
+      await storageSet(
+        "vaija_session",
+        JSON.stringify({ token, user, driver, activeRideId })
+      );
+    }
+  },
 }));

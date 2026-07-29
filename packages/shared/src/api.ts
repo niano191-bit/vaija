@@ -59,6 +59,9 @@ export const api = {
 
   me: (token: string) => request<User>("/auth/me", { token }),
 
+  updateProfile: (token: string, data: { name?: string; phone?: string }) =>
+    request<User>("/auth/me", { method: "PATCH", body: data, token }),
+
   getCategories: (token: string, distanceKm = 5) =>
     request<CategoryQuote[]>(`/categories?distanceKm=${distanceKm}`, { token }),
 
@@ -82,6 +85,9 @@ export const api = {
 
   createCoupon: (token: string, data: Partial<Coupon>) =>
     request<Coupon>("/coupons", { method: "POST", body: data, token }),
+
+  updateCoupon: (token: string, data: { id: string; active: boolean }) =>
+    request<Coupon>("/coupons", { method: "PATCH", body: data, token }),
 
   createRide: (
     token: string,
