@@ -4,6 +4,7 @@ import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, Text
 import { Ionicons } from "@expo/vector-icons";
 import { api, type Favorite, type Place } from "@vaija/shared";
 import { Button, Screen, Title } from "../../src/components/ui";
+import { searchPlaces } from "../../src/geo";
 import { useAuth } from "../../src/store";
 import { theme } from "../../src/theme";
 
@@ -17,37 +18,6 @@ const RECENT: Place[] = [
   { id: "p-morumbi", label: "Shopping Morumbi", address: "Av. Roque Petroni Júnior, 1089", lat: -23.6226, lng: -46.6986 },
   { id: "p-ibirapuera", label: "Parque Ibirapuera", address: "Av. Pedro Álvares Cabral", lat: -23.5873, lng: -46.6576 },
 ];
-
-async function searchPlaces(query: string): Promise<Place[]> {
-  const q = encodeURIComponent(`${query}, São Paulo, Brasil`);
-  const url = `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=5&countrycodes=br&q=${q}`;
-  const res = await fetch(url, {
-    headers: {
-      Accept: "application/json",
-      "Accept-Language": "pt-BR",
-    },
-  });
-  if (!res.ok) throw new Error("Falha na busca de endereço");
-  const data = (await res.json()) as Array<{
-    place_id: number;
-    display_name: string;
-    lat: string;
-    lon: string;
-    name?: string;
-  }>;
-  return data.map((item) => {
-    const parts = item.display_name.split(",");
-    const label = (item.name || parts[0] || query).trim();
-    return {
-      id: `geo-${item.place_id}`,
-      label,
-      address: item.display_name,
-      lat: Number(item.lat),
-      lng: Number(item.lon),
-      icon: "pin" as const,
-    };
-  });
-}
 
 export default function DestinoScreen() {
   const router = useRouter();

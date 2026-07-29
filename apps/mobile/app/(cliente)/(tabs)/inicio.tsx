@@ -4,6 +4,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { api, formatBRL, type CategoryQuote, type Place } from "@vaija/shared";
 import { Button, MapPlaceholder, Screen } from "../../../src/components/ui";
+import { getCurrentPlace } from "../../../src/geo";
 import { useAuth } from "../../../src/store";
 import { theme } from "../../../src/theme";
 
@@ -60,16 +61,10 @@ export default function InicioScreen() {
     else router.push("/(cliente)/aguardando");
   };
 
-  const goDestino = (place?: Place) => {
+  const goDestino = async (place?: Place) => {
+    const origin = await getCurrentPlace();
     setBooking({
-      origin: {
-        id: "meu-local",
-        label: "Meu local",
-        address: "Localização atual",
-        lat: -23.55,
-        lng: -46.63,
-        icon: "pin",
-      },
+      origin,
       destination: place,
     });
     if (place) {

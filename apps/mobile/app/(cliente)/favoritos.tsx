@@ -4,6 +4,7 @@ import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 
 import { Ionicons } from "@expo/vector-icons";
 import { api, type Favorite } from "@vaija/shared";
 import { Button, Screen, Title } from "../../src/components/ui";
+import { getCurrentPlace, searchPlaces } from "../../src/geo";
 import { useAuth } from "../../src/store";
 import { theme } from "../../src/theme";
 
@@ -36,16 +37,10 @@ export default function FavoritosScreen() {
     }, [load])
   );
 
-  const useAsDestination = (f: Favorite) => {
+  const useAsDestination = async (f: Favorite) => {
+    const origin = await getCurrentPlace();
     setBooking({
-      origin: {
-        id: "meu-local",
-        label: "Meu local",
-        address: "Localização atual",
-        lat: -23.55,
-        lng: -46.63,
-        icon: "pin",
-      },
+      origin,
       destination: f.place,
     });
     router.push("/(cliente)/categoria");
@@ -54,20 +49,22 @@ export default function FavoritosScreen() {
   const addFavorite = async () => {
     if (!token) return;
     const name = label.trim() || "Novo local";
-    const addr = address.trim() || "Endereço salvo na conta";
+    const addr = address.trim() || name;
     try {
+      const found = (await searchPlaces(addr))[0] || (await searchPlaces(name))[0];
       await api.addFavorite(token, {
-        id: `custom-${Date.now()}`,
+        id: found?.id || `custom-${Date.now()}`,
         label: name,
-        address: addr,
-        lat: -23.55 + Math.random() * 0.04,
-        lng: -46.63 + Math.random() * 0.04,
+        address: found?.address || addr,
+        lat: found?.lat ?? -23.55,
+        lng: found?.lng ?? -46.63,
+        icon: "pin",
       });
       setLabel("");
       setAddress("");
       setAdding(false);
       await load();
-      Alert.alert("Salvo", `${name} adicionado aos favoritos`);
+      Alert.alert("Salvo", found ? `${name} geolocalizado e salvo` : `${name} adicionado aos favoritos`);
     } catch (e: any) {
       Alert.alert("Erro", e.message || "Não foi possível salvar");
     }
