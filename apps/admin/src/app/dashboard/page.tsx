@@ -9,10 +9,18 @@ import { api, formatBRL, type DashboardStats } from "@vaija/shared";
 export default function DashboardPage() {
   const token = useAdminAuth((s) => s.token);
   const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     if (!token) return;
-    const load = () => api.getDashboard(token).then(setStats).catch(() => {});
+    const load = () =>
+      api
+        .getDashboard(token)
+        .then((s) => {
+          setStats(s);
+          setError("");
+        })
+        .catch((e: any) => setError(e.message || "Falha ao carregar dashboard"));
     load();
     const id = setInterval(load, 3000);
     return () => clearInterval(id);
@@ -45,6 +53,11 @@ export default function DashboardPage() {
     <Guard>
       <h1 className="text-2xl font-extrabold text-[#0B1F3A] mb-2">Dashboard</h1>
       <p className="text-sm text-gray-500 mb-6">Atualiza a cada 3s · clique nos cards para ir à área</p>
+      {error ? (
+        <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {error}
+        </div>
+      ) : null}
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-8">
         {cards.map((c) => (

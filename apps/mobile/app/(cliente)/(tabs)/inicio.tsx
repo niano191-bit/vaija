@@ -1,5 +1,5 @@
 import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { api, formatBRL, type CategoryQuote, type Place } from "@vaija/shared";
@@ -18,10 +18,15 @@ export default function InicioScreen() {
   const { user, token, setBooking, activeRideId, setActiveRideId } = useAuth();
   const [categories, setCategories] = useState<CategoryQuote[]>([]);
   const [activeStatus, setActiveStatus] = useState<string | null>(null);
+  const [favorites, setFavorites] = useState<Place[]>([]);
 
   useEffect(() => {
     if (!token) return;
     api.getCategories(token).then(setCategories).catch(() => {});
+    api
+      .getFavorites(token)
+      .then((list) => setFavorites(list.map((f) => f.place)))
+      .catch(() => {});
     api
       .getPendingRide(token)
       .then((ride) => {
@@ -34,6 +39,16 @@ export default function InicioScreen() {
       })
       .catch(() => {});
   }, [token]);
+
+  const quickPlaces = useMemo(() => {
+    if (!favorites.length) return QUICK;
+    const merged = [...favorites];
+    for (const q of QUICK) {
+      if (merged.length >= 3) break;
+      if (!merged.some((p) => p.label === q.label)) merged.push(q);
+    }
+    return merged.slice(0, 3);
+  }, [favorites]);
 
   const openActiveRide = () => {
     if (!activeStatus) {
@@ -64,6 +79,13 @@ export default function InicioScreen() {
     router.push("/(cliente)/destino");
   };
 
+  const iconFor = (p: Place) => {
+    if (p.icon === "home" || p.label.toLowerCase().includes("casa")) return "home" as const;
+    if (p.icon === "work" || p.label.toLowerCase().includes("trabalho")) return "briefcase" as const;
+    if (p.icon === "airport" || p.label.toLowerCase().includes("aeroporto")) return "airplane" as const;
+    return "heart" as const;
+  };
+
   return (
     <Screen>
       <ScrollView contentContainerStyle={{ paddingBottom: 24 }}>
@@ -79,14 +101,10 @@ export default function InicioScreen() {
         </View>
 
         <View style={styles.section}>
-          {QUICK.map((p) => (
+          {quickPlaces.map((p) => (
             <Pressable key={p.id} style={styles.quick} onPress={() => goDestino(p)}>
               <View style={styles.quickIcon}>
-                <Ionicons
-                  name={p.icon === "home" ? "home" : p.icon === "work" ? "briefcase" : "airplane"}
-                  size={18}
-                  color={theme.colors.navy}
-                />
+                <Ionicons name={iconFor(p)} size={18} color={theme.colors.navy} />
               </View>
               <View>
                 <Text style={styles.quickLabel}>{p.label}</Text>

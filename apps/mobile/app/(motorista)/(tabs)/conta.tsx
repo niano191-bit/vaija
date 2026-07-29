@@ -1,6 +1,8 @@
-import { useRouter } from "expo-router";
-import { Pressable, StyleSheet, Text, View } from "react-native";
-import { Screen } from "../../../src/components/ui";
+import { useFocusEffect, useRouter } from "expo-router";
+import { useCallback, useState } from "react";
+import { Alert, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { api, formatBRL } from "@vaija/shared";
+import { Button, Screen } from "../../../src/components/ui";
 import { useAuth } from "../../../src/store";
 import { theme } from "../../../src/theme";
 
@@ -13,21 +15,64 @@ const DOC_ITEMS = [
 
 export default function MotoristaConta() {
   const router = useRouter();
-  const { user, driver, logout } = useAuth();
+  const { user, driver, token, logout, setUser, setDriver } = useAuth();
   const approved = Boolean(driver?.documentsApproved);
+  const [name, setName] = useState(user?.name || "");
+  const [phone, setPhone] = useState(user?.phone || "");
+  const [saving, setSaving] = useState(false);
+
+  useFocusEffect(
+    useCallback(() => {
+      setName(user?.name || "");
+      setPhone(user?.phone || "");
+      if (!token) return;
+      api
+        .getDrivers(token)
+        .then((list) => {
+          const mine = list.find((d) => d.userId === user?.id);
+          if (mine) setDriver(mine);
+        })
+        .catch(() => {});
+    }, [token, user?.id, user?.name, user?.phone])
+  );
+
+  const save = async () => {
+    if (!token) return;
+    try {
+      setSaving(true);
+      const updated = await api.updateProfile(token, { name: name.trim(), phone: phone.trim() });
+      await setUser(updated);
+      Alert.alert("Salvo", "Dados atualizados.");
+    } catch (e: any) {
+      Alert.alert("Erro", e.message || "Não foi possível salvar");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <Screen style={{ padding: 20, paddingTop: 56 }}>
-      <Text style={styles.name}>{user?.name}</Text>
-      <Text style={styles.meta}>{user?.phone}</Text>
-      <Text style={styles.meta}>{user?.email}</Text>
+      <Text style={styles.heading}>Minha conta</Text>
+
+      <View style={styles.card}>
+        <Text style={styles.label}>Nome</Text>
+        <TextInput style={styles.input} value={name} onChangeText={setName} />
+        <Text style={[styles.label, { marginTop: 12 }]}>Telefone</Text>
+        <TextInput style={styles.input} value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
+        <Text style={[styles.label, { marginTop: 12 }]}>E-mail</Text>
+        <Text style={styles.value}>{user?.email}</Text>
+        <Button title="Salvar" onPress={save} loading={saving} style={{ marginTop: 14 }} />
+      </View>
 
       <View style={styles.card}>
         <Text style={styles.label}>Veículo</Text>
         <Text style={styles.value}>
-          {driver?.vehicle.model} — {driver?.vehicle.color}
+          {driver?.vehicle?.model || "—"} — {driver?.vehicle?.color || "—"}
         </Text>
-        <Text style={styles.plate}>{driver?.vehicle.plate}</Text>
+        <Text style={styles.plate}>{driver?.vehicle?.plate || "—"}</Text>
+        <Text style={styles.earn}>
+          Hoje {formatBRL(driver?.earningsToday || 0)} · Semana {formatBRL(driver?.earningsWeek || 0)}
+        </Text>
         <Text style={[styles.docs, !approved && styles.docsPending]}>
           Documentos: {approved ? "Aprovados pelo admin" : "Em análise / pendentes"}
         </Text>
@@ -43,7 +88,7 @@ export default function MotoristaConta() {
         </View>
       ))}
       <Text style={styles.hint}>
-        Nesta demo os documentos do Carlos já vêm aprovados pelo seed. Em produção o admin valida o envio.
+        O admin libera o motorista em Motoristas no painel. Carlos já vem aprovado no seed de demo.
       </Text>
 
       <Pressable
@@ -60,18 +105,24 @@ export default function MotoristaConta() {
 }
 
 const styles = StyleSheet.create({
-  name: { fontSize: 24, fontWeight: "800", color: theme.colors.navy },
-  meta: { color: theme.colors.textMuted, marginTop: 4 },
+  heading: { fontSize: 24, fontWeight: "800", color: theme.colors.navy, marginBottom: 8 },
   card: {
-    marginTop: 24,
+    marginTop: 16,
     backgroundColor: theme.colors.gray,
     borderRadius: 14,
     padding: 16,
-    gap: 4,
   },
-  label: { color: theme.colors.textMuted },
-  value: { fontWeight: "700", color: theme.colors.navy, fontSize: 16 },
-  plate: { fontWeight: "800", color: theme.colors.blue },
+  label: { color: theme.colors.textMuted, fontSize: 12, fontWeight: "600" },
+  value: { fontWeight: "700", color: theme.colors.navy, fontSize: 16, marginTop: 4 },
+  input: {
+    marginTop: 4,
+    fontWeight: "700",
+    color: theme.colors.navy,
+    fontSize: 16,
+    paddingVertical: 4,
+  },
+  plate: { fontWeight: "800", color: theme.colors.blue, marginTop: 4 },
+  earn: { marginTop: 8, color: theme.colors.navy, fontWeight: "600", fontSize: 13 },
   docs: { marginTop: 8, color: theme.colors.green, fontWeight: "600" },
   docsPending: { color: theme.colors.danger },
   section: { marginTop: 24, fontWeight: "800", color: theme.colors.navy, marginBottom: 8 },
