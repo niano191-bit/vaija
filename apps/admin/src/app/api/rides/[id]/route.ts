@@ -37,8 +37,12 @@ export async function PATCH(req: Request, ctx: Ctx) {
     if (auth.profile.id !== ride.driver_id && auth.profile.role !== "admin") {
       return err("Não autorizado", 403);
     }
+    if (ride.status === "concluida") {
+      // already settled — only allow rating/comment updates below
+    } else {
     patch.status = "concluida";
     const driverEarn = +(Number(ride.price) * 0.8).toFixed(2);
+    const total = Number(ride.total);
 
     if (ride.driver_id) {
       const { data: driver } = await supabase.from("drivers").select("*").eq("user_id", ride.driver_id).single();
@@ -63,7 +67,7 @@ export async function PATCH(req: Request, ctx: Ctx) {
           ride_id: ride.id,
           user_id: ride.client_id,
           type: "corrida",
-          amount: -Number(ride.total),
+          amount: -total,
           description: `Corrida até ${ride.destination_label}`,
         },
         {
@@ -82,6 +86,18 @@ export async function PATCH(req: Request, ctx: Ctx) {
         },
       ]);
     }
+
+    // Debit client wallet balance for demo (all payment methods use the app wallet ledger)
+    const { data: clientWallet } = await supabase
+      .from("wallets")
+      .select("*")
+      .eq("user_id", ride.client_id)
+      .maybeSingle();
+    if (clientWallet) {
+      const nextBal = Math.max(0, +(Number(clientWallet.balance) - total).toFixed(2));
+      await supabase.from("wallets").update({ balance: nextBal }).eq("user_id", ride.client_id);
+    }
+    }
   } else if (status === "cancelada") {
     if (
       auth.profile.id !== ride.client_id &&
@@ -96,6 +112,22 @@ export async function PATCH(req: Request, ctx: Ctx) {
   if (typeof body.rating === "number") {
     patch.rating = body.rating;
     patch.comment = body.comment || null;
+
+    const driverId = ride.driver_id;
+    if (driverId) {
+      const { data: allRated } = await supabase
+        .from("rides")
+        .select("id, rating")
+        .eq("driver_id", driverId)
+        .not("rating", "is", null);
+      const byId = new Map((allRated || []).map((r: any) => [r.id, Number(r.rating)]));
+      byId.set(id, Number(body.rating));
+      const vals = [...byId.values()].filter((n) => n > 0);
+      if (vals.length) {
+        const avg = +(vals.reduce((s, n) => s + n, 0) / vals.length).toFixed(2);
+        await supabase.from("profiles").update({ rating: avg }).eq("id", driverId);
+      }
+    }
   }
 
   const { data: updated, error: uErr } = await supabase

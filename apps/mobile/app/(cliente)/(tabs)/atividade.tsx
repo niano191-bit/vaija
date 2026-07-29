@@ -1,4 +1,4 @@
-import { useFocusEffect } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { api, formatBRL, formatDate, STATUS_LABELS, type Ride } from "@vaija/shared";
@@ -9,7 +9,8 @@ import { theme } from "../../../src/theme";
 type Tab = "todos" | "ativas" | "concluidas";
 
 export default function AtividadeScreen() {
-  const token = useAuth((s) => s.token);
+  const router = useRouter();
+  const { token, setActiveRideId } = useAuth();
   const [rides, setRides] = useState<Ride[]>([]);
   const [tab, setTab] = useState<Tab>("todos");
   const [loading, setLoading] = useState(true);
@@ -43,6 +44,25 @@ export default function AtividadeScreen() {
     }
     return rides;
   }, [rides, tab]);
+
+  const openRide = async (r: Ride) => {
+    if (["solicitada", "aceita", "a_caminho"].includes(r.status)) {
+      await setActiveRideId(r.id);
+      router.push("/(cliente)/aguardando");
+      return;
+    }
+    if (r.status === "em_andamento") {
+      await setActiveRideId(r.id);
+      router.push("/(cliente)/corrida");
+      return;
+    }
+    if (r.status === "concluida") {
+      await setActiveRideId(r.id);
+      if (r.rating) router.push("/(cliente)/concluida");
+      else router.push("/(cliente)/avaliar");
+      return;
+    }
+  };
 
   return (
     <Screen style={{ paddingTop: 56 }}>
@@ -80,14 +100,23 @@ export default function AtividadeScreen() {
         ) : null}
         {!loading
           ? list.map((r) => (
-              <View key={r.id} style={styles.item}>
+              <Pressable
+                key={r.id}
+                style={[styles.item, r.status === "cancelada" && styles.itemMuted]}
+                onPress={() => openRide(r)}
+                disabled={r.status === "cancelada"}
+              >
                 <View style={{ flex: 1 }}>
                   <Text style={styles.dest}>{r.destination.label}</Text>
                   <Text style={styles.meta}>{formatDate(r.createdAt)}</Text>
-                  <Text style={styles.status}>{STATUS_LABELS[r.status] || r.status}</Text>
+                  <Text style={styles.status}>
+                    {STATUS_LABELS[r.status] || r.status}
+                    {r.rating ? ` · ★ ${r.rating}` : ""}
+                    {r.status !== "cancelada" ? " · abrir" : ""}
+                  </Text>
                 </View>
                 <Text style={styles.price}>{formatBRL(r.total)}</Text>
-              </View>
+              </Pressable>
             ))
           : null}
       </ScrollView>
@@ -110,6 +139,7 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.border,
     backgroundColor: theme.colors.white,
   },
+  itemMuted: { opacity: 0.55 },
   dest: { fontWeight: "700", color: theme.colors.navy },
   meta: { color: theme.colors.textMuted, fontSize: 12, marginTop: 2 },
   status: { color: theme.colors.green, fontSize: 12, fontWeight: "600", marginTop: 4 },

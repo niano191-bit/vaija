@@ -1,6 +1,6 @@
 import { useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
-import { Alert, StyleSheet, Text, View } from "react-native";
+import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
 import { api, type Ride } from "@vaija/shared";
 import { Button, MapPlaceholder, Screen } from "../../src/components/ui";
 import { sendQuickRideMessage, watchRideMessages } from "../../src/rideChat";
@@ -109,6 +109,33 @@ export default function NavegarScreen() {
             loading={busy}
           />
         </View>
+        <Pressable
+          onPress={() => {
+            if (!ride || busy) return;
+            Alert.alert("Cancelar corrida?", "O passageiro será notificado.", [
+              { text: "Não", style: "cancel" },
+              {
+                text: "Sim, cancelar",
+                style: "destructive",
+                onPress: async () => {
+                  try {
+                    setBusy(true);
+                    await api.updateRide(token!, ride.id, { status: "cancelada" });
+                    setActiveRideId(null);
+                    router.replace("/(motorista)/(tabs)/inicio");
+                  } catch (e: any) {
+                    Alert.alert("Erro", e.message || "Não foi possível cancelar");
+                  } finally {
+                    setBusy(false);
+                  }
+                },
+              },
+            ]);
+          }}
+          disabled={busy}
+        >
+          <Text style={[styles.cancel, busy && { opacity: 0.5 }]}>Cancelar corrida</Text>
+        </Pressable>
       </View>
     </Screen>
   );
@@ -128,4 +155,5 @@ const styles = StyleSheet.create({
   addr: { color: theme.colors.textMuted, marginTop: 4 },
   dest: { marginTop: 12, color: theme.colors.blue, fontWeight: "600" },
   actions: { flexDirection: "row", gap: 10, marginTop: 24 },
+  cancel: { color: theme.colors.danger, textAlign: "center", marginTop: 16, fontWeight: "700" },
 });

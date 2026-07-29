@@ -70,6 +70,25 @@ export default function FavoritosScreen() {
     }
   };
 
+  const removeFavorite = (f: Favorite) => {
+    Alert.alert("Remover favorito?", f.place.label, [
+      { text: "Cancelar", style: "cancel" },
+      {
+        text: "Remover",
+        style: "destructive",
+        onPress: async () => {
+          if (!token) return;
+          try {
+            await api.deleteFavorite(token, f.id);
+            await load();
+          } catch (e: any) {
+            Alert.alert("Erro", e.message || "Não foi possível remover");
+          }
+        },
+      },
+    ]);
+  };
+
   return (
     <Screen style={{ paddingTop: 52 }}>
       <View style={{ paddingHorizontal: 20, flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
@@ -122,14 +141,19 @@ export default function FavoritosScreen() {
         ) : null}
 
         {list.map((f) => (
-          <Pressable key={f.id} style={styles.row} onPress={() => useAsDestination(f)}>
-            <Ionicons name="heart" size={18} color={theme.colors.danger} />
-            <View style={{ flex: 1 }}>
-              <Text style={styles.label}>{f.place.label}</Text>
-              <Text style={styles.addr}>{f.place.address}</Text>
-              <Text style={styles.cta}>Usar como destino →</Text>
-            </View>
-          </Pressable>
+          <View key={f.id} style={styles.row}>
+            <Pressable style={styles.rowMain} onPress={() => useAsDestination(f)}>
+              <Ionicons name="heart" size={18} color={theme.colors.danger} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.label}>{f.place.label}</Text>
+                <Text style={styles.addr}>{f.place.address}</Text>
+                <Text style={styles.cta}>Usar como destino →</Text>
+              </View>
+            </Pressable>
+            <Pressable onPress={() => removeFavorite(f)} hitSlop={12} style={styles.trash}>
+              <Ionicons name="trash-outline" size={20} color={theme.colors.textMuted} />
+            </Pressable>
+          </View>
         ))}
       </ScrollView>
     </Screen>
@@ -149,14 +173,21 @@ const styles = StyleSheet.create({
   },
   row: {
     flexDirection: "row",
-    gap: 12,
     alignItems: "center",
-    padding: 14,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: theme.colors.border,
     backgroundColor: theme.colors.white,
+    overflow: "hidden",
   },
+  rowMain: {
+    flex: 1,
+    flexDirection: "row",
+    gap: 12,
+    alignItems: "center",
+    padding: 14,
+  },
+  trash: { paddingHorizontal: 14, paddingVertical: 16 },
   label: { fontWeight: "700", color: theme.colors.navy },
   addr: { color: theme.colors.textMuted, fontSize: 12 },
   cta: { color: theme.colors.blue, fontWeight: "700", fontSize: 12, marginTop: 6 },

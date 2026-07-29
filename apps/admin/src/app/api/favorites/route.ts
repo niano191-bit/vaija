@@ -58,3 +58,21 @@ export async function POST(req: Request) {
     },
   });
 }
+
+export async function DELETE(req: Request) {
+  const auth = await getUserFromAuthHeader(req);
+  if (!auth) return err("Não autorizado", 401);
+  const id = new URL(req.url).searchParams.get("id");
+  if (!id) return err("id obrigatório");
+  const supabase = getServiceClient();
+  const { data, error } = await supabase
+    .from("favorites")
+    .delete()
+    .eq("id", id)
+    .eq("user_id", auth.profile.id)
+    .select("id")
+    .maybeSingle();
+  if (error) return err(error.message, 500);
+  if (!data) return err("Favorito não encontrado", 404);
+  return json({ ok: true, id: data.id });
+}

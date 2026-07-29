@@ -77,6 +77,12 @@ export const api = {
   addFavorite: (token: string, place: Place) =>
     request<Favorite>("/favorites", { method: "POST", body: place, token }),
 
+  deleteFavorite: (token: string, id: string) =>
+    request<{ ok: boolean; id: string }>(`/favorites?id=${encodeURIComponent(id)}`, {
+      method: "DELETE",
+      token,
+    }),
+
   getWallet: (token: string) => request<Wallet>("/wallet", { token }),
 
   selectPayment: (token: string, methodId: string) =>
