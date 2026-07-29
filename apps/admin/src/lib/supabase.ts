@@ -131,13 +131,14 @@ export async function enrichRide(supabase: SupabaseClient, ride: any) {
       ? supabase.from("drivers").select("*").eq("user_id", ride.driver_id).maybeSingle()
       : Promise.resolve({ data: null }),
     ride.driver_id
-      ? supabase.from("profiles").select("name,rating").eq("id", ride.driver_id).maybeSingle()
+      ? supabase.from("profiles").select("name,rating,phone").eq("id", ride.driver_id).maybeSingle()
       : Promise.resolve({ data: null }),
   ]);
 
   return mapRide(ride, {
     clientName: client?.name,
     driverName: driverUser?.name,
+    driverPhone: driverUser?.phone || undefined,
     driverRating: driverUser?.rating != null ? Number(driverUser.rating) : undefined,
     vehicle: driverProfile
       ? {

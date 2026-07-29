@@ -9,13 +9,19 @@ import { theme } from "../../src/theme";
 
 export default function ConcluidaScreen() {
   const router = useRouter();
-  const { token, activeRideId } = useAuth();
+  const { token, activeRideId, setActiveRideId, clearBooking } = useAuth();
   const [ride, setRide] = useState<Ride | null>(null);
 
   useEffect(() => {
     if (!token || !activeRideId) return;
     api.getRide(token, activeRideId).then(setRide);
   }, [token, activeRideId]);
+
+  const goHome = async () => {
+    await setActiveRideId(null);
+    clearBooking();
+    router.replace("/(cliente)/(tabs)/inicio");
+  };
 
   return (
     <Screen style={styles.container}>
@@ -31,12 +37,7 @@ export default function ConcluidaScreen() {
         onPress={() => router.replace("/(cliente)/avaliar")}
         style={{ width: "100%", marginTop: 32 }}
       />
-      <Button
-        title="OK"
-        variant="outline"
-        onPress={() => router.replace("/(cliente)/avaliar")}
-        style={{ width: "100%", marginTop: 10 }}
-      />
+      <Button title="OK" variant="outline" onPress={goHome} style={{ width: "100%", marginTop: 10 }} />
     </Screen>
   );
 }

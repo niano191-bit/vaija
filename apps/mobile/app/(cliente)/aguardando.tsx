@@ -1,16 +1,23 @@
 import { useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { Alert, Linking, Pressable, StyleSheet, Text, View } from "react-native";
 import { api, type Ride } from "@vaija/shared";
 import { Button, MapPlaceholder, Screen } from "../../src/components/ui";
 import { useAuth } from "../../src/store";
 import { theme } from "../../src/theme";
 
+function toTel(phone?: string) {
+  if (!phone) return null;
+  const digits = phone.replace(/\D/g, "");
+  if (!digits) return null;
+  return digits.startsWith("55") ? `tel:+${digits}` : `tel:+55${digits}`;
+}
+
 export default function AguardandoScreen() {
   const router = useRouter();
   const { token, activeRideId, setActiveRideId } = useAuth();
   const [ride, setRide] = useState<Ride | null>(null);
+  const [busy, setBusy] = useState(false);
   const navKey = useRef<string | null>(null);
 
   useEffect(() => {
@@ -19,7 +26,11 @@ export default function AguardandoScreen() {
       api
         .getRide(token, activeRideId)
         .then((r) => {
-          setRide((prev) => (prev?.id === r.id && prev.status === r.status && prev.driverName === r.driverName ? prev : r));
+          setRide((prev) =>
+            prev?.id === r.id && prev.status === r.status && prev.driverName === r.driverName && prev.driverPhone === r.driverPhone
+              ? prev
+              : r
+          );
           const key = `${r.id}:${r.status}`;
           if (navKey.current === key) return;
           if (r.status === "em_andamento") {
@@ -42,10 +53,52 @@ export default function AguardandoScreen() {
   }, [token, activeRideId]);
 
   const cancel = async () => {
-    if (!ride) return;
-    await api.updateRide(token!, ride.id, { status: "cancelada" });
-    setActiveRideId(null);
-    router.replace("/(cliente)/(tabs)/inicio");
+    if (!ride || busy) return;
+    try {
+      setBusy(true);
+      await api.updateRide(token!, ride.id, { status: "cancelada" });
+      setActiveRideId(null);
+      router.replace("/(cliente)/(tabs)/inicio");
+    } catch (e: any) {
+      Alert.alert("Erro", e.message || "Não foi possível cancelar");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const messageDriver = () => {
+    if (!ride?.driverName) {
+      Alert.alert("Aguarde", "Assim que um motorista aceitar, você poderá enviar mensagem.");
+      return;
+    }
+    Alert.alert("Mensagem para " + ride.driverName, "Escolha uma mensagem rápida", [
+      { text: "Cancelar", style: "cancel" },
+      {
+        text: "Estou aqui",
+        onPress: () => Alert.alert("Enviado", "Mensagem enviada ao motorista."),
+      },
+      {
+        text: "Já estou saindo",
+        onPress: () => Alert.alert("Enviado", "Mensagem enviada ao motorista."),
+      },
+    ]);
+  };
+
+  const callDriver = async () => {
+    if (!ride?.driverName) {
+      Alert.alert("Aguarde", "Assim que um motorista aceitar, você poderá ligar.");
+      return;
+    }
+    const href = toTel(ride.driverPhone);
+    if (!href) {
+      Alert.alert("Ligação", "Telefone do motorista indisponível nesta corrida.");
+      return;
+    }
+    try {
+      await Linking.openURL(href);
+    } catch {
+      Alert.alert("Ligação", "Não foi possível abrir o discador.");
+    }
   };
 
   const found = ride && ["aceita", "a_caminho"].includes(ride.status);
@@ -66,7 +119,9 @@ export default function AguardandoScreen() {
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.name}>{ride.driverName}</Text>
-              <Text style={styles.meta}>★ {ride.driverRating?.toFixed(1)} · {ride.vehicle?.model} — {ride.vehicle?.color}</Text>
+              <Text style={styles.meta}>
+                ★ {ride.driverRating?.toFixed(1)} · {ride.vehicle?.model} — {ride.vehicle?.color}
+              </Text>
               <Text style={styles.plate}>{ride.vehicle?.plate}</Text>
             </View>
           </View>
@@ -75,24 +130,11 @@ export default function AguardandoScreen() {
         )}
 
         <View style={styles.actions}>
-          <Button
-            title="Mensagem"
-            variant="secondary"
-            style={{ flex: 1, opacity: 0.55 }}
-            disabled
-            onPress={() => {}}
-          />
-          <Button
-            title="Ligar"
-            variant="outline"
-            style={{ flex: 1, opacity: 0.55 }}
-            disabled
-            onPress={() => {}}
-          />
+          <Button title="Mensagem" variant="secondary" style={{ flex: 1 }} onPress={messageDriver} />
+          <Button title="Ligar" variant="outline" style={{ flex: 1 }} onPress={callDriver} />
         </View>
-        <Text style={styles.hint}>Chat e ligação entram na próxima versão</Text>
-        <Pressable onPress={cancel}>
-          <Text style={styles.cancel}>Cancelar corrida</Text>
+        <Pressable onPress={cancel} disabled={busy}>
+          <Text style={[styles.cancel, busy && { opacity: 0.5 }]}>{busy ? "Cancelando..." : "Cancelar corrida"}</Text>
         </Pressable>
       </View>
     </Screen>
@@ -125,6 +167,5 @@ const styles = StyleSheet.create({
   meta: { color: theme.colors.textMuted, fontSize: 12, marginTop: 2 },
   plate: { fontWeight: "700", color: theme.colors.navy, marginTop: 2 },
   actions: { flexDirection: "row", gap: 10, marginTop: 20 },
-  hint: { color: theme.colors.textMuted, textAlign: "center", marginTop: 8, fontSize: 12 },
   cancel: { color: theme.colors.danger, textAlign: "center", marginTop: 16, fontWeight: "700" },
 });

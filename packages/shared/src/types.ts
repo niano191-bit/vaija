@@ -74,6 +74,7 @@ export interface Ride {
   updatedAt: string;
   clientName?: string;
   driverName?: string;
+  driverPhone?: string;
   driverRating?: number;
   vehicle?: DriverProfile["vehicle"];
   rating?: number;
