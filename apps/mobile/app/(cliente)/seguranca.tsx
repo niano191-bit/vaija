@@ -1,25 +1,40 @@
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Alert, Pressable, StyleSheet, Switch, Text, TextInput, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { api } from "@vaija/shared";
 import { Button, Screen, Title } from "../../src/components/ui";
+import { loadJson, saveJson } from "../../src/prefs";
 import { useAuth } from "../../src/store";
 import { theme } from "../../src/theme";
 
 type Contact = { name: string; phone: string };
+
+const CONTACTS_KEY = "vaija_emergency_contacts";
 
 export default function SegurancaScreen() {
   const router = useRouter();
   const { token, activeRideId, user } = useAuth();
   const [record, setRecord] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [contacts, setContacts] = useState<Contact[]>([
-    { name: "Contato principal", phone: user?.phone || "(11) 90000-0000" },
-  ]);
+  const [contacts, setContacts] = useState<Contact[]>([]);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [showForm, setShowForm] = useState(false);
+
+  useEffect(() => {
+    loadJson<Contact[]>(CONTACTS_KEY, []).then((saved) => {
+      if (saved.length) setContacts(saved);
+      else {
+        setContacts([{ name: "Contato principal", phone: user?.phone || "(11) 90000-0000" }]);
+      }
+    });
+  }, [user?.phone]);
+
+  const persist = async (next: Contact[]) => {
+    setContacts(next);
+    await saveJson(CONTACTS_KEY, next);
+  };
 
   const sos = async () => {
     try {
@@ -38,7 +53,7 @@ export default function SegurancaScreen() {
       Alert.alert("Preencha nome e telefone");
       return;
     }
-    setContacts((c) => [...c, { name: name.trim(), phone: phone.trim() }]);
+    persist([...contacts, { name: name.trim(), phone: phone.trim() }]);
     setName("");
     setPhone("");
     setShowForm(false);

@@ -19,7 +19,7 @@ export default function DashboardPage() {
 
   const cards = [
     { label: "Corridas ativas", value: stats?.activeRides ?? "—" },
-    { label: "Receita (taxas)", value: formatBRL(stats?.revenueToday || 0) },
+    { label: "Receita hoje (taxas)", value: formatBRL(stats?.revenueToday || 0) },
     { label: "Motoristas online", value: stats?.driversOnline ?? "—" },
     { label: "SOS abertos", value: stats?.openSos ?? "—" },
     { label: "Tickets abertos", value: stats?.openTickets ?? "—" },
@@ -29,7 +29,8 @@ export default function DashboardPage() {
 
   return (
     <Guard>
-      <h1 className="text-2xl font-extrabold text-[#0B1F3A] mb-6">Dashboard</h1>
+      <h1 className="text-2xl font-extrabold text-[#0B1F3A] mb-2">Dashboard</h1>
+      <p className="text-sm text-gray-500 mb-6">Atualiza a cada 3s</p>
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
         {cards.map((c) => (
           <div key={c.label} className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
