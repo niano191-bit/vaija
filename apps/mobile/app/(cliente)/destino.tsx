@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { api, type Favorite, type Place } from "@vaija/shared";
-import { Screen, Title } from "../../src/components/ui";
+import { Button, Screen, Title } from "../../src/components/ui";
 import { useAuth } from "../../src/store";
 import { theme } from "../../src/theme";
 
@@ -41,12 +41,32 @@ export default function DestinoScreen() {
     router.push("/(cliente)/categoria");
   };
 
+  const confirmTyped = () => {
+    const label = query.trim();
+    if (label.length < 2) return;
+    select({
+      id: `typed-${Date.now()}`,
+      label,
+      address: `${label} — São Paulo`,
+      lat: -23.55 + (Math.random() - 0.5) * 0.06,
+      lng: -46.63 + (Math.random() - 0.5) * 0.06,
+      icon: "pin",
+    });
+  };
+
   const filteredRecent = RECENT.filter(
     (p) => !query || p.label.toLowerCase().includes(query.toLowerCase()),
   );
   const filteredSaved = saved.filter(
-    (p) => !query || p.label.toLowerCase().includes(query.toLowerCase()) || p.address.toLowerCase().includes(query.toLowerCase()),
+    (p) =>
+      !query ||
+      p.label.toLowerCase().includes(query.toLowerCase()) ||
+      p.address.toLowerCase().includes(query.toLowerCase()),
   );
+  const showTyped =
+    query.trim().length >= 2 &&
+    !filteredSaved.some((p) => p.label.toLowerCase() === query.trim().toLowerCase()) &&
+    !filteredRecent.some((p) => p.label.toLowerCase() === query.trim().toLowerCase());
 
   return (
     <Screen style={{ paddingTop: 52 }}>
@@ -67,8 +87,13 @@ export default function DestinoScreen() {
             placeholderTextColor={theme.colors.textMuted}
             value={query}
             onChangeText={setQuery}
+            onSubmitEditing={confirmTyped}
+            returnKeyType="done"
           />
         </View>
+        {showTyped ? (
+          <Button title={`Ir para “${query.trim()}”`} onPress={confirmTyped} style={{ marginTop: 12 }} />
+        ) : null}
       </View>
       <ScrollView contentContainerStyle={{ padding: 20, gap: 8 }}>
         <Text style={styles.section}>Salvos</Text>

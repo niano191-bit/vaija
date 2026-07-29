@@ -1,5 +1,5 @@
 import { useFocusEffect, useRouter } from "expo-router";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useState } from "react";
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { api, formatBRL, type Wallet } from "@vaija/shared";
@@ -11,10 +11,16 @@ export default function CarteiraScreen() {
   const router = useRouter();
   const token = useAuth((s) => s.token)!;
   const [wallet, setWallet] = useState<Wallet | null>(null);
-  const methodsRef = useRef<View>(null);
+  const [error, setError] = useState("");
 
   const load = useCallback(() => {
-    api.getWallet(token).then(setWallet).catch(() => {});
+    api
+      .getWallet(token)
+      .then((w) => {
+        setWallet(w);
+        setError("");
+      })
+      .catch((e: any) => setError(e.message || "Falha ao carregar carteira"));
   }, [token]);
 
   useFocusEffect(
@@ -34,19 +40,37 @@ export default function CarteiraScreen() {
   };
 
   const select = async (methodId: string) => {
-    const w = await api.selectPayment(token, methodId);
-    setWallet(w);
+    try {
+      const w = await api.selectPayment(token, methodId);
+      setWallet(w);
+      const method = w.methods.find((m) => m.id === methodId);
+      Alert.alert("Pagamento", `${method?.label || "Método"} definido como padrão`);
+    } catch (e: any) {
+      Alert.alert("Erro", e.message || "Falha ao selecionar pagamento");
+    }
   };
 
-  const focusMethods = () => {
-    methodsRef.current?.measureInWindow?.(() => {});
-    Alert.alert("Formas de pagamento", "Selecione PIX ou cartão na lista abaixo.");
+  const pickByType = (kind: "pix" | "card") => {
+    if (kind === "pix") {
+      const pix = wallet?.methods?.find((m) => m.type === "pix");
+      if (pix) return select(pix.id);
+      Alert.alert("PIX", "Nenhuma chave PIX cadastrada nesta demo.");
+      return;
+    }
+    const card = wallet?.methods?.find((m) => m.type === "visa" || m.type === "mastercard");
+    if (card) return select(card.id);
+    Alert.alert("Cartões", "Nenhum cartão cadastrado nesta demo.");
   };
 
   return (
     <Screen style={{ paddingTop: 56 }}>
       <ScrollView contentContainerStyle={{ padding: 20, gap: 16 }}>
         <Title>Carteira</Title>
+        {error ? (
+          <Pressable onPress={load}>
+            <Text style={styles.error}>{error} · tocar para tentar de novo</Text>
+          </Pressable>
+        ) : null}
         <View style={styles.balanceCard}>
           <Text style={styles.balanceLabel}>Saldo disponível</Text>
           <Text style={styles.balance}>{formatBRL(wallet?.balance || 0)}</Text>
@@ -58,8 +82,8 @@ export default function CarteiraScreen() {
 
         <View style={styles.grid}>
           {[
-            { label: "PIX", icon: "flash", onPress: focusMethods },
-            { label: "Cartões", icon: "card", onPress: focusMethods },
+            { label: "PIX", icon: "flash", onPress: () => pickByType("pix") },
+            { label: "Cartões", icon: "card", onPress: () => pickByType("card") },
             {
               label: "Cupons",
               icon: "pricetag",
@@ -79,7 +103,7 @@ export default function CarteiraScreen() {
         </View>
 
         <Text style={styles.section}>Formas de pagamento</Text>
-        <View ref={methodsRef}>
+        <View>
           {wallet?.methods?.length ? (
             wallet.methods.map((m) => (
               <Pressable key={m.id} style={styles.method} onPress={() => select(m.id)}>
@@ -88,7 +112,7 @@ export default function CarteiraScreen() {
               </Pressable>
             ))
           ) : (
-            <Text style={styles.empty}>Nenhuma forma cadastrada.</Text>
+            <Text style={styles.empty}>{error ? "—" : "Nenhuma forma cadastrada."}</Text>
           )}
         </View>
         <Text style={styles.add}>Toque em um método para selecionar como padrão.</Text>
@@ -136,4 +160,5 @@ const styles = StyleSheet.create({
   radioOn: { backgroundColor: theme.colors.yellow },
   add: { color: theme.colors.textMuted, fontSize: 12, marginTop: 4 },
   empty: { color: theme.colors.textMuted },
+  error: { color: theme.colors.danger, fontWeight: "600", textAlign: "center" },
 });
