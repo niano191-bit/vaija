@@ -8,8 +8,18 @@ import { api, formatDate, type SosAlert } from "@vaija/shared";
 export default function SosPage() {
   const token = useAdminAuth((s) => s.token);
   const [alerts, setAlerts] = useState<SosAlert[]>([]);
+  const [error, setError] = useState("");
 
-  const load = () => token && api.getSos(token).then(setAlerts).catch(() => {});
+  const load = () => {
+    if (!token) return;
+    api
+      .getSos(token)
+      .then((data) => {
+        setAlerts(data);
+        setError("");
+      })
+      .catch((e: any) => setError(e.message || "Falha ao carregar SOS"));
+  };
 
   useEffect(() => {
     load();
@@ -25,8 +35,16 @@ export default function SosPage() {
       <p className="text-gray-500 mb-6">
         Alertas prioritários · {open} aberto(s) · atualiza a cada 2s
       </p>
+      {error ? (
+        <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {error}{" "}
+          <button className="font-bold underline" onClick={load}>
+            Tentar de novo
+          </button>
+        </div>
+      ) : null}
       <div className="grid gap-3">
-        {alerts.length === 0 ? (
+        {alerts.length === 0 && !error ? (
           <div className="bg-white rounded-2xl border p-5 text-gray-500">Nenhum alerta registrado.</div>
         ) : (
           alerts.map((a) => (
@@ -37,6 +55,13 @@ export default function SosPage() {
               <div className="flex justify-between items-center gap-4 flex-wrap">
                 <div>
                   <p className="font-bold text-lg">{a.userName}</p>
+                  {a.userPhone ? (
+                    <a className="text-sm font-semibold text-[#1E88E5]" href={`tel:${a.userPhone.replace(/\D/g, "")}`}>
+                      {a.userPhone}
+                    </a>
+                  ) : (
+                    <p className="text-sm text-gray-400">Telefone indisponível</p>
+                  )}
                   <p className="text-sm text-gray-500">{formatDate(a.createdAt)}</p>
                   <p className="text-sm mt-1">
                     Lat {a.lat.toFixed(4)}, Lng {a.lng.toFixed(4)}
@@ -55,8 +80,12 @@ export default function SosPage() {
                   <button
                     className="px-4 py-2 rounded-xl bg-red-500 text-white font-bold"
                     onClick={async () => {
-                      await api.resolveSos(token!, a.id);
-                      load();
+                      try {
+                        await api.resolveSos(token!, a.id);
+                        load();
+                      } catch (e: any) {
+                        setError(e.message || "Falha ao atender SOS");
+                      }
                     }}
                   >
                     Atender

@@ -124,6 +124,7 @@ export interface SosAlert {
   id: string;
   userId: string;
   userName: string;
+  userPhone?: string;
   rideId?: string;
   status: "aberto" | "atendido";
   createdAt: string;

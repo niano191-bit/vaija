@@ -1,4 +1,4 @@
-import { useFocusEffect, useRouter } from "expo-router";
+import { useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { api, formatBRL, formatDate, STATUS_LABELS, type Ride } from "@vaija/shared";
@@ -9,48 +9,67 @@ import { theme } from "../../../src/theme";
 export default function AtividadeScreen() {
   const token = useAuth((s) => s.token);
   const [rides, setRides] = useState<Ride[]>([]);
-  const [tab, setTab] = useState<"todos" | "corridas" | "entregas">("todos");
+  const [tab, setTab] = useState<"todos" | "corridas">("todos");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const load = useCallback(async () => {
+    if (!token) return;
+    try {
+      setError("");
+      setLoading(true);
+      setRides(await api.getRides(token, { mine: true }));
+    } catch (e: any) {
+      setError(e.message || "Falha ao carregar atividade");
+    } finally {
+      setLoading(false);
+    }
+  }, [token]);
 
   useFocusEffect(
     useCallback(() => {
-      if (!token) return;
-      api.getRides(token, { mine: true }).then(setRides).catch(() => {});
-    }, [token])
+      load();
+    }, [load])
   );
 
-  const list = tab === "entregas" ? [] : rides;
+  const list = rides;
 
   return (
     <Screen style={{ paddingTop: 56 }}>
       <View style={{ paddingHorizontal: 20 }}>
         <Title>Atividade</Title>
         <View style={styles.tabs}>
-          {(["todos", "corridas", "entregas"] as const).map((t) => (
+          {(["todos", "corridas"] as const).map((t) => (
             <Pressable key={t} onPress={() => setTab(t)} style={[styles.tab, tab === t && styles.tabOn]}>
               <Text style={[styles.tabText, tab === t && styles.tabTextOn]}>
-                {t === "todos" ? "Todos" : t === "corridas" ? "Corridas" : "Entregas"}
+                {t === "todos" ? "Todos" : "Corridas"}
               </Text>
             </Pressable>
           ))}
         </View>
       </View>
       <ScrollView contentContainerStyle={{ padding: 20, gap: 12 }}>
-        {list.length === 0 ? (
-          <Text style={styles.empty}>
-            {tab === "entregas" ? "Entregas entram na próxima versão" : "Nenhuma atividade ainda"}
-          </Text>
-        ) : (
-          list.map((r) => (
-            <View key={r.id} style={styles.item}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.dest}>{r.destination.label}</Text>
-                <Text style={styles.meta}>{formatDate(r.createdAt)}</Text>
-                <Text style={styles.status}>{STATUS_LABELS[r.status] || r.status}</Text>
+        {error ? (
+          <Pressable onPress={load}>
+            <Text style={styles.error}>{error} · tocar para tentar de novo</Text>
+          </Pressable>
+        ) : null}
+        {loading ? <Text style={styles.empty}>Carregando...</Text> : null}
+        {!loading && !error && list.length === 0 ? (
+          <Text style={styles.empty}>Nenhuma corrida ainda</Text>
+        ) : null}
+        {!loading
+          ? list.map((r) => (
+              <View key={r.id} style={styles.item}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.dest}>{r.destination.label}</Text>
+                  <Text style={styles.meta}>{formatDate(r.createdAt)}</Text>
+                  <Text style={styles.status}>{STATUS_LABELS[r.status] || r.status}</Text>
+                </View>
+                <Text style={styles.price}>{formatBRL(r.total)}</Text>
               </View>
-              <Text style={styles.price}>{formatBRL(r.total)}</Text>
-            </View>
-          ))
-        )}
+            ))
+          : null}
       </ScrollView>
     </Screen>
   );
@@ -76,4 +95,5 @@ const styles = StyleSheet.create({
   status: { color: theme.colors.green, fontSize: 12, fontWeight: "600", marginTop: 4 },
   price: { fontWeight: "800", color: theme.colors.navy },
   empty: { color: theme.colors.textMuted, textAlign: "center", marginTop: 40 },
+  error: { color: theme.colors.danger, textAlign: "center", fontWeight: "600", marginTop: 20 },
 });

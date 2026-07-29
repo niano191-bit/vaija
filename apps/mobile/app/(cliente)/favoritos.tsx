@@ -1,22 +1,77 @@
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { api, type Favorite } from "@vaija/shared";
-import { Screen, Title } from "../../src/components/ui";
+import { Button, Screen, Title } from "../../src/components/ui";
 import { useAuth } from "../../src/store";
 import { theme } from "../../src/theme";
 
 export default function FavoritosScreen() {
   const router = useRouter();
-  const token = useAuth((s) => s.token)!;
+  const { token, setBooking } = useAuth();
   const [list, setList] = useState<Favorite[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [adding, setAdding] = useState(false);
+  const [label, setLabel] = useState("");
+  const [address, setAddress] = useState("");
+
+  const load = useCallback(async () => {
+    if (!token) return;
+    try {
+      setError("");
+      setLoading(true);
+      setList(await api.getFavorites(token));
+    } catch (e: any) {
+      setError(e.message || "Falha ao carregar favoritos");
+    } finally {
+      setLoading(false);
+    }
+  }, [token]);
 
   useFocusEffect(
     useCallback(() => {
-      api.getFavorites(token).then(setList).catch(() => {});
-    }, [token])
+      load();
+    }, [load])
   );
+
+  const useAsDestination = (f: Favorite) => {
+    setBooking({
+      origin: {
+        id: "meu-local",
+        label: "Meu local",
+        address: "Localização atual",
+        lat: -23.55,
+        lng: -46.63,
+        icon: "pin",
+      },
+      destination: f.place,
+    });
+    router.push("/(cliente)/categoria");
+  };
+
+  const addFavorite = async () => {
+    if (!token) return;
+    const name = label.trim() || "Novo local";
+    const addr = address.trim() || "Endereço salvo na conta";
+    try {
+      await api.addFavorite(token, {
+        id: `custom-${Date.now()}`,
+        label: name,
+        address: addr,
+        lat: -23.55 + Math.random() * 0.04,
+        lng: -46.63 + Math.random() * 0.04,
+      });
+      setLabel("");
+      setAddress("");
+      setAdding(false);
+      await load();
+      Alert.alert("Salvo", `${name} adicionado aos favoritos`);
+    } catch (e: any) {
+      Alert.alert("Erro", e.message || "Não foi possível salvar");
+    }
+  };
 
   return (
     <Screen style={{ paddingTop: 52 }}>
@@ -27,34 +82,57 @@ export default function FavoritosScreen() {
           </Pressable>
           <Title style={{ marginTop: 12 }}>Favoritos</Title>
         </View>
-        <Pressable
-          onPress={async () => {
-            try {
-              await api.addFavorite(token, {
-                id: `custom-${Date.now()}`,
-                label: "Novo local",
-                address: "Endereço salvo na conta",
-                lat: -23.55,
-                lng: -46.63,
-              });
-              setList(await api.getFavorites(token));
-            } catch {
-              // ignore
-            }
-          }}
-        >
-          <Text style={styles.add}>+ Adicionar</Text>
+        <Pressable onPress={() => setAdding((v) => !v)}>
+          <Text style={styles.add}>{adding ? "Cancelar" : "+ Adicionar"}</Text>
         </Pressable>
       </View>
+
       <ScrollView contentContainerStyle={{ padding: 20, gap: 10 }}>
+        {adding ? (
+          <View style={styles.form}>
+            <TextInput
+              style={styles.input}
+              placeholder="Nome (ex: Casa)"
+              placeholderTextColor={theme.colors.textMuted}
+              value={label}
+              onChangeText={setLabel}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Endereço"
+              placeholderTextColor={theme.colors.textMuted}
+              value={address}
+              onChangeText={setAddress}
+            />
+            <Button title="Salvar favorito" onPress={addFavorite} />
+          </View>
+        ) : null}
+
+        {error ? (
+          <Pressable onPress={load}>
+            <Text style={styles.error}>{error} · tocar para tentar de novo</Text>
+          </Pressable>
+        ) : null}
+
+        {loading ? <Text style={styles.empty}>Carregando...</Text> : null}
+
+        {!loading && !error && list.length === 0 ? (
+          <View style={styles.emptyBox}>
+            <Text style={styles.empty}>Nenhum favorito ainda</Text>
+            <Text style={styles.emptyHint}>Salve locais para pedir corrida com 1 toque</Text>
+            <Button title="Adicionar local" onPress={() => setAdding(true)} style={{ marginTop: 16 }} />
+          </View>
+        ) : null}
+
         {list.map((f) => (
-          <View key={f.id} style={styles.row}>
+          <Pressable key={f.id} style={styles.row} onPress={() => useAsDestination(f)}>
             <Ionicons name="heart" size={18} color={theme.colors.danger} />
-            <View>
+            <View style={{ flex: 1 }}>
               <Text style={styles.label}>{f.place.label}</Text>
               <Text style={styles.addr}>{f.place.address}</Text>
+              <Text style={styles.cta}>Usar como destino →</Text>
             </View>
-          </View>
+          </Pressable>
         ))}
       </ScrollView>
     </Screen>
@@ -63,6 +141,15 @@ export default function FavoritosScreen() {
 
 const styles = StyleSheet.create({
   add: { color: theme.colors.blue, fontWeight: "700", marginTop: 36 },
+  form: { gap: 10, marginBottom: 8 },
+  input: {
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 12,
+    padding: 12,
+    backgroundColor: theme.colors.gray,
+    color: theme.colors.navy,
+  },
   row: {
     flexDirection: "row",
     gap: 12,
@@ -71,7 +158,13 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     borderColor: theme.colors.border,
+    backgroundColor: theme.colors.white,
   },
   label: { fontWeight: "700", color: theme.colors.navy },
   addr: { color: theme.colors.textMuted, fontSize: 12 },
+  cta: { color: theme.colors.blue, fontWeight: "700", fontSize: 12, marginTop: 6 },
+  empty: { color: theme.colors.textMuted, textAlign: "center" },
+  emptyHint: { color: theme.colors.textMuted, textAlign: "center", fontSize: 12, marginTop: 6 },
+  emptyBox: { marginTop: 40, alignItems: "center" },
+  error: { color: theme.colors.danger, textAlign: "center", fontWeight: "600" },
 });

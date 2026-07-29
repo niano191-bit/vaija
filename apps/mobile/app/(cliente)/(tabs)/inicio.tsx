@@ -57,6 +57,10 @@ export default function InicioScreen() {
       },
       destination: place,
     });
+    if (place) {
+      router.push("/(cliente)/categoria");
+      return;
+    }
     router.push("/(cliente)/destino");
   };
 
