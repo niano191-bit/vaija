@@ -18,8 +18,8 @@ export default function AguardandoScreen() {
       api.getRide(token, activeRideId).then((r) => {
         setRide(r);
         if (r.status === "em_andamento") router.replace("/(cliente)/corrida");
-        if (r.status === "concluida") router.replace("/(cliente)/concluida");
-        if (r.status === "cancelada") {
+        else if (r.status === "concluida") router.replace("/(cliente)/concluida");
+        else if (r.status === "cancelada") {
           setActiveRideId(null);
           router.replace("/(cliente)/(tabs)/inicio");
         }

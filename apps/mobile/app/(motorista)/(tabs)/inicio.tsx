@@ -26,11 +26,12 @@ export default function MotoristaInicio() {
           mine: true,
           status: "aceita,a_caminho,em_andamento",
         });
-        if (active[0] && !activeRideId) {
+        if (active[0]) {
           setActiveRideId(active[0].id);
-          if (active[0].status === "em_andamento") router.push("/(motorista)/em-andamento");
-          else if (["aceita", "a_caminho"].includes(active[0].status)) {
-            router.push("/(motorista)/navegar");
+          if (active[0].status === "em_andamento") {
+            router.replace("/(motorista)/em-andamento");
+          } else if (["aceita", "a_caminho"].includes(active[0].status)) {
+            router.replace("/(motorista)/navegar");
           }
         }
       } catch {}

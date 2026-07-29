@@ -2,9 +2,14 @@ import { create } from "zustand";
 import { api, type DriverProfile, type Place, type Ride, type User, type VehicleCategory } from "@vaija/shared";
 import { Platform } from "react-native";
 
+/** Web: sessionStorage so cliente and motorista can stay logged in in separate tabs. */
+function webStore() {
+  return typeof sessionStorage !== "undefined" ? sessionStorage : null;
+}
+
 async function storageGet(key: string) {
   if (Platform.OS === "web") {
-    return typeof localStorage !== "undefined" ? localStorage.getItem(key) : null;
+    return webStore()?.getItem(key) ?? null;
   }
   const SecureStore = await import("expo-secure-store");
   return SecureStore.getItemAsync(key);
@@ -12,7 +17,7 @@ async function storageGet(key: string) {
 
 async function storageSet(key: string, value: string) {
   if (Platform.OS === "web") {
-    localStorage.setItem(key, value);
+    webStore()?.setItem(key, value);
     return;
   }
   const SecureStore = await import("expo-secure-store");
@@ -21,7 +26,7 @@ async function storageSet(key: string, value: string) {
 
 async function storageDelete(key: string) {
   if (Platform.OS === "web") {
-    localStorage.removeItem(key);
+    webStore()?.removeItem(key);
     return;
   }
   const SecureStore = await import("expo-secure-store");
