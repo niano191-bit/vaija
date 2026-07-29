@@ -9,8 +9,18 @@ export default function SuportePage() {
   const token = useAdminAuth((s) => s.token);
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
   const [filter, setFilter] = useState<"todos" | "abertos" | "resolvido">("todos");
+  const [error, setError] = useState("");
 
-  const load = () => token && api.getTickets(token).then(setTickets).catch(() => {});
+  const load = () => {
+    if (!token) return;
+    api
+      .getTickets(token)
+      .then((t) => {
+        setTickets(t);
+        setError("");
+      })
+      .catch((e: any) => setError(e.message || "Falha ao carregar tickets"));
+  };
 
   useEffect(() => {
     load();
@@ -28,6 +38,14 @@ export default function SuportePage() {
     <Guard>
       <h1 className="text-2xl font-extrabold mb-2">Suporte</h1>
       <p className="text-sm text-gray-500 mb-4">{tickets.length} ticket(s)</p>
+      {error ? (
+        <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {error}{" "}
+          <button className="font-bold underline" onClick={load}>
+            Tentar de novo
+          </button>
+        </div>
+      ) : null}
 
       <div className="flex gap-2 mb-4">
         {(
@@ -68,8 +86,12 @@ export default function SuportePage() {
                   <button
                     className="text-[#1E88E5] font-semibold text-sm"
                     onClick={async () => {
-                      await api.updateTicket(token!, t.id, "em_andamento");
-                      load();
+                      try {
+                        await api.updateTicket(token!, t.id, "em_andamento");
+                        load();
+                      } catch (e: any) {
+                        setError(e.message || "Falha ao atualizar ticket");
+                      }
                     }}
                   >
                     Em andamento
@@ -79,8 +101,12 @@ export default function SuportePage() {
                   <button
                     className="text-green-600 font-semibold text-sm"
                     onClick={async () => {
-                      await api.updateTicket(token!, t.id, "resolvido");
-                      load();
+                      try {
+                        await api.updateTicket(token!, t.id, "resolvido");
+                        load();
+                      } catch (e: any) {
+                        setError(e.message || "Falha ao resolver ticket");
+                      }
                     }}
                   >
                     Marcar resolvido

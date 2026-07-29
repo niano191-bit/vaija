@@ -9,10 +9,18 @@ export default function FinanceiroPage() {
   const token = useAdminAuth((s) => s.token);
   const [txs, setTxs] = useState<Transaction[]>([]);
   const [filter, setFilter] = useState<"todas" | "taxa" | "credito" | "corrida">("todas");
+  const [error, setError] = useState("");
 
   useEffect(() => {
     if (!token) return;
-    const load = () => api.getTransactions(token).then(setTxs).catch(() => {});
+    const load = () =>
+      api
+        .getTransactions(token)
+        .then((t) => {
+          setTxs(t);
+          setError("");
+        })
+        .catch((e: any) => setError(e.message || "Falha ao carregar financeiro"));
     load();
     const id = setInterval(load, 5000);
     return () => clearInterval(id);
@@ -36,6 +44,9 @@ export default function FinanceiroPage() {
     <Guard>
       <h1 className="text-2xl font-extrabold mb-2">Financeiro</h1>
       <p className="text-sm text-gray-500 mb-6">Atualiza a cada 5s · extrato completo da plataforma</p>
+      {error ? (
+        <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
+      ) : null}
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3 mb-6">
         {[

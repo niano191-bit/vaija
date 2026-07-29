@@ -9,8 +9,18 @@ export default function UsuariosPage() {
   const token = useAdminAuth((s) => s.token);
   const [users, setUsers] = useState<User[]>([]);
   const [q, setQ] = useState("");
+  const [error, setError] = useState("");
 
-  const load = () => token && api.getUsers(token).then(setUsers).catch(() => {});
+  const load = () => {
+    if (!token) return;
+    api
+      .getUsers(token)
+      .then((u) => {
+        setUsers(u);
+        setError("");
+      })
+      .catch((e: any) => setError(e.message || "Falha ao carregar usuários"));
+  };
 
   useEffect(() => {
     load();
@@ -33,6 +43,14 @@ export default function UsuariosPage() {
     <Guard>
       <h1 className="text-2xl font-extrabold mb-2">Usuários</h1>
       <p className="text-sm text-gray-500 mb-4">{users.length} cadastrado(s)</p>
+      {error ? (
+        <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {error}{" "}
+          <button className="font-bold underline" onClick={load}>
+            Tentar de novo
+          </button>
+        </div>
+      ) : null}
 
       <input
         className="w-full max-w-md h-10 rounded-xl border px-3 mb-4"
@@ -70,8 +88,12 @@ export default function UsuariosPage() {
                     <button
                       className="text-[#1E88E5] font-semibold"
                       onClick={async () => {
-                        await api.blockUser(token!, u.id, !u.blocked);
-                        load();
+                        try {
+                          await api.blockUser(token!, u.id, !u.blocked);
+                          load();
+                        } catch (e: any) {
+                          setError(e.message || "Falha ao bloquear usuário");
+                        }
                       }}
                     >
                       {u.blocked ? "Desbloquear" : "Bloquear"}

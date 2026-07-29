@@ -1,6 +1,6 @@
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { Alert, StyleSheet, Text, View } from "react-native";
 import { api, formatBRL, type Ride } from "@vaija/shared";
 import { Button, MapPlaceholder, Screen } from "../../src/components/ui";
 import { useAuth } from "../../src/store";
@@ -8,22 +8,33 @@ import { theme } from "../../src/theme";
 
 export default function EmAndamentoMotorista() {
   const router = useRouter();
-  const { token, activeRideId, setActiveRideId, setDriver } = useAuth();
+  const { token, activeRideId, setActiveRideId, setDriver, user } = useAuth();
   const [ride, setRide] = useState<Ride | null>(null);
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     if (!token || !activeRideId) return;
-    api.getRide(token, activeRideId).then(setRide);
+    api
+      .getRide(token, activeRideId)
+      .then(setRide)
+      .catch((e: any) => Alert.alert("Erro", e.message || "Falha ao carregar corrida"));
   }, [token, activeRideId]);
 
   const finish = async () => {
-    if (!ride) return;
-    await api.updateRide(token!, ride.id, { status: "concluida" });
-    const drivers = await api.getDrivers(token!);
-    const me = drivers.find((d) => d.userId === useAuth.getState().user?.id);
-    if (me) setDriver(me);
-    setActiveRideId(null);
-    router.replace("/(motorista)/concluida");
+    if (!ride || busy) return;
+    try {
+      setBusy(true);
+      await api.updateRide(token!, ride.id, { status: "concluida" });
+      const drivers = await api.getDrivers(token!);
+      const me = drivers.find((d) => d.userId === user?.id);
+      if (me) setDriver(me);
+      setActiveRideId(null);
+      router.replace("/(motorista)/concluida");
+    } catch (e: any) {
+      Alert.alert("Erro", e.message || "Não foi possível finalizar");
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
@@ -31,10 +42,16 @@ export default function EmAndamentoMotorista() {
       <MapPlaceholder height={360} label="Rota até o destino" route />
       <View style={styles.sheet}>
         <Text style={styles.title}>Corrida em andamento</Text>
-        <Text style={styles.dest}>{ride?.destination.label}</Text>
-        <Text style={styles.addr}>{ride?.destination.address}</Text>
+        <Text style={styles.dest}>{ride?.destination?.label || "—"}</Text>
+        <Text style={styles.addr}>{ride?.destination?.address || "—"}</Text>
         <Text style={styles.earn}>Você receberá {formatBRL((ride?.price || 0) * 0.8)}</Text>
-        <Button title="Finalizar corrida" onPress={finish} style={{ marginTop: 24 }} />
+        <Button
+          title={busy ? "Finalizando..." : "Finalizar corrida"}
+          onPress={finish}
+          style={{ marginTop: 24 }}
+          disabled={!ride || busy}
+          loading={busy}
+        />
       </View>
     </Screen>
   );

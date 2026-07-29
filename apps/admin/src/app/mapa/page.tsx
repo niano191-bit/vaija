@@ -28,16 +28,22 @@ export default function MapaPage() {
   const token = useAdminAuth((s) => s.token);
   const [rides, setRides] = useState<Ride[]>([]);
   const [drivers, setDrivers] = useState<DriverRow[]>([]);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     if (!token) return;
     const load = async () => {
-      const [r, d] = await Promise.all([
-        api.getRides(token, { status: "solicitada,aceita,a_caminho,em_andamento" }),
-        api.getDrivers(token),
-      ]);
-      setRides(r);
-      setDrivers(d as DriverRow[]);
+      try {
+        const [r, d] = await Promise.all([
+          api.getRides(token, { status: "solicitada,aceita,a_caminho,em_andamento" }),
+          api.getDrivers(token),
+        ]);
+        setRides(r);
+        setDrivers(d as DriverRow[]);
+        setError("");
+      } catch (e: any) {
+        setError(e.message || "Falha ao carregar mapa");
+      }
     };
     load();
     const id = setInterval(load, 3000);
@@ -52,6 +58,9 @@ export default function MapaPage() {
       <p className="text-sm text-gray-500 mb-6">
         OpenStreetMap · atualiza a cada 3s · {rides.length} corrida(s) · {onlineDrivers.length} motorista(s) online
       </p>
+      {error ? (
+        <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
+      ) : null}
 
       <div className="relative h-[520px] rounded-2xl overflow-hidden border border-gray-200 shadow-sm z-0">
         <LiveMap rides={rides} drivers={onlineDrivers} />

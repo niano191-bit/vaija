@@ -16,8 +16,18 @@ export default function CorridasPage() {
   const token = useAdminAuth((s) => s.token);
   const [rides, setRides] = useState<Ride[]>([]);
   const [filter, setFilter] = useState<(typeof FILTERS)[number]["id"]>("todas");
+  const [error, setError] = useState("");
 
-  const load = () => token && api.getRides(token).then(setRides).catch(() => {});
+  const load = () => {
+    if (!token) return;
+    api
+      .getRides(token)
+      .then((r) => {
+        setRides(r);
+        setError("");
+      })
+      .catch((e: any) => setError(e.message || "Falha ao carregar corridas"));
+  };
 
   useEffect(() => {
     load();
@@ -39,6 +49,14 @@ export default function CorridasPage() {
       <p className="text-sm text-gray-500 mb-4">
         {rides.length} no total · {visible.length} no filtro
       </p>
+      {error ? (
+        <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {error}{" "}
+          <button className="font-bold underline" onClick={load}>
+            Tentar de novo
+          </button>
+        </div>
+      ) : null}
 
       <div className="flex flex-wrap gap-2 mb-4">
         {FILTERS.map((f) => (
@@ -91,8 +109,12 @@ export default function CorridasPage() {
                         className="text-red-500 font-semibold"
                         onClick={async () => {
                           if (!confirm("Cancelar esta corrida?")) return;
-                          await api.updateRide(token!, r.id, { status: "cancelada" });
-                          load();
+                          try {
+                            await api.updateRide(token!, r.id, { status: "cancelada" });
+                            load();
+                          } catch (e: any) {
+                            setError(e.message || "Falha ao cancelar corrida");
+                          }
                         }}
                       >
                         Cancelar

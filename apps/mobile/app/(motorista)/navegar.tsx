@@ -1,6 +1,6 @@
 import { useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { Alert, StyleSheet, Text, View } from "react-native";
 import { api, type Ride } from "@vaija/shared";
 import { Button, MapPlaceholder, Screen } from "../../src/components/ui";
 import { useAuth } from "../../src/store";
@@ -10,6 +10,7 @@ export default function NavegarScreen() {
   const router = useRouter();
   const { token, activeRideId, setActiveRideId } = useAuth();
   const [ride, setRide] = useState<Ride | null>(null);
+  const [busy, setBusy] = useState(false);
   const navKey = useRef<string | null>(null);
 
   useEffect(() => {
@@ -46,7 +47,9 @@ export default function NavegarScreen() {
           navKey.current = key;
           router.replace("/(motorista)/em-andamento");
         }
-      } catch {}
+      } catch {
+        // keep polling
+      }
     };
 
     load();
@@ -55,10 +58,17 @@ export default function NavegarScreen() {
   }, [token, activeRideId]);
 
   const arrived = async () => {
-    if (!ride) return;
-    await api.updateRide(token!, ride.id, { status: "a_caminho" });
-    await api.updateRide(token!, ride.id, { status: "em_andamento" });
-    router.replace("/(motorista)/em-andamento");
+    if (!ride || busy) return;
+    try {
+      setBusy(true);
+      await api.updateRide(token!, ride.id, { status: "a_caminho" });
+      await api.updateRide(token!, ride.id, { status: "em_andamento" });
+      router.replace("/(motorista)/em-andamento");
+    } catch (e: any) {
+      Alert.alert("Erro", e.message || "Não foi possível iniciar a corrida");
+    } finally {
+      setBusy(false);
+    }
   };
 
   const mapLat = ride?.origin.lat ?? -23.55;
@@ -72,7 +82,13 @@ export default function NavegarScreen() {
         <Text style={styles.name}>{ride?.clientName || "Carregando…"}</Text>
         <Text style={styles.addr}>{ride?.origin?.address || "—"}</Text>
         <Text style={styles.dest}>Destino: {ride?.destination?.label || "—"}</Text>
-        <Button title="Cheguei / Iniciar corrida" onPress={arrived} style={{ marginTop: 24 }} disabled={!ride} />
+        <Button
+          title={busy ? "Iniciando..." : "Cheguei / Iniciar corrida"}
+          onPress={arrived}
+          style={{ marginTop: 24 }}
+          disabled={!ride || busy}
+          loading={busy}
+        />
       </View>
     </Screen>
   );
