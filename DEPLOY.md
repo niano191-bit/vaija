@@ -68,6 +68,17 @@ EXPO_NO_METRO_WORKSPACE_ROOT=1
 
 Health check: `GET https://vaija-admin.vercel.app/api/health`
 
+### Build APK (celular)
+
+Na pasta `apps/mobile` (conta Expo logada):
+
+```bash
+npx eas-cli login
+npx eas build -p android --profile preview
+```
+
+O perfil `preview` gera um **APK** instalável (veja `eas.json`).
+
 ## Arquitetura
 
 ```

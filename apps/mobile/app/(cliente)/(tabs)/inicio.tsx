@@ -15,22 +15,35 @@ const QUICK: Place[] = [
 
 export default function InicioScreen() {
   const router = useRouter();
-  const { user, token, setBooking, activeRideId } = useAuth();
+  const { user, token, setBooking, activeRideId, setActiveRideId } = useAuth();
   const [categories, setCategories] = useState<CategoryQuote[]>([]);
+  const [activeStatus, setActiveStatus] = useState<string | null>(null);
 
   useEffect(() => {
     if (!token) return;
     api.getCategories(token).then(setCategories).catch(() => {});
-    api.getPendingRide(token).then((ride) => {
-      if (!ride) return;
-      useAuth.getState().setActiveRideId(ride.id);
-      if (ride.status === "solicitada" || ride.status === "aceita" || ride.status === "a_caminho") {
-        router.push("/(cliente)/aguardando");
-      } else if (ride.status === "em_andamento") {
-        router.push("/(cliente)/corrida");
-      }
-    }).catch(() => {});
+    api
+      .getPendingRide(token)
+      .then((ride) => {
+        if (!ride) {
+          setActiveStatus(null);
+          return;
+        }
+        setActiveRideId(ride.id);
+        setActiveStatus(ride.status);
+      })
+      .catch(() => {});
   }, [token]);
+
+  const openActiveRide = () => {
+    if (!activeStatus) {
+      router.push("/(cliente)/aguardando");
+      return;
+    }
+    if (activeStatus === "em_andamento") router.push("/(cliente)/corrida");
+    else if (activeStatus === "concluida") router.push("/(cliente)/concluida");
+    else router.push("/(cliente)/aguardando");
+  };
 
   const goDestino = (place?: Place) => {
     setBooking({
@@ -112,8 +125,12 @@ export default function InicioScreen() {
         </ScrollView>
 
         {activeRideId ? (
-          <View style={{ paddingHorizontal: 16, marginTop: 12 }}>
-            <Button title="Ver corrida ativa" onPress={() => router.push("/(cliente)/aguardando")} />
+          <View style={styles.activeBanner}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.activeTitle}>Corrida em andamento</Text>
+              <Text style={styles.activeSub}>Toque para continuar de onde parou</Text>
+            </View>
+            <Button title="Abrir" onPress={openActiveRide} style={{ minWidth: 100 }} />
           </View>
         ) : null}
       </ScrollView>
@@ -164,4 +181,16 @@ const styles = StyleSheet.create({
   },
   catName: { fontWeight: "700", color: theme.colors.navy },
   catPrice: { color: theme.colors.blue, fontWeight: "700" },
+  activeBanner: {
+    marginHorizontal: 16,
+    marginTop: 8,
+    padding: 14,
+    borderRadius: 16,
+    backgroundColor: theme.colors.navy,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  activeTitle: { color: theme.colors.yellow, fontWeight: "800", fontSize: 15 },
+  activeSub: { color: "rgba(255,255,255,0.7)", marginTop: 2, fontSize: 12 },
 });
