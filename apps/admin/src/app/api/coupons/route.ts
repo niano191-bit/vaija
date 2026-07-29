@@ -15,7 +15,7 @@ export async function GET(req: Request) {
   const auth = await getUserFromAuthHeader(req);
   if (!auth) return err("Não autorizado", 401);
   const supabase = getServiceClient();
-  let q = supabase.from("coupons").select("*").order("created_at", { ascending: false });
+  let q = supabase.from("coupons").select("*").order("code", { ascending: true });
   if (auth.profile.role !== "admin") q = q.eq("active", true);
   const { data, error } = await q;
   if (error) return err(error.message, 500);
