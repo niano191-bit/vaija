@@ -11,6 +11,7 @@ import { theme } from "../../src/theme";
 type Contact = { name: string; phone: string };
 
 const CONTACTS_KEY = "vaija_emergency_contacts";
+const AUDIO_KEY = "vaija_record_audio";
 
 export default function SegurancaScreen() {
   const router = useRouter();
@@ -29,11 +30,23 @@ export default function SegurancaScreen() {
         setContacts([{ name: "Contato principal", phone: user?.phone || "(11) 90000-0000" }]);
       }
     });
+    loadJson<boolean>(AUDIO_KEY, false).then(setRecord);
   }, [user?.phone]);
 
   const persist = async (next: Contact[]) => {
     setContacts(next);
     await saveJson(CONTACTS_KEY, next);
+  };
+
+  const toggleRecord = async (value: boolean) => {
+    setRecord(value);
+    await saveJson(AUDIO_KEY, value);
+    Alert.alert(
+      value ? "Áudio ativado" : "Áudio desativado",
+      value
+        ? "Nas próximas corridas o app marcará a preferência de gravar áudio (demo local)."
+        : "Preferência salva: gravação desligada.",
+    );
   };
 
   const sos = async () => {
@@ -106,8 +119,11 @@ export default function SegurancaScreen() {
       )}
 
       <View style={styles.row}>
-        <Text style={styles.rowLabel}>Gravar áudio da viagem</Text>
-        <Switch value={record} onValueChange={setRecord} trackColor={{ true: theme.colors.yellow }} />
+        <View style={{ flex: 1, paddingRight: 12 }}>
+          <Text style={styles.rowLabel}>Gravar áudio da viagem</Text>
+          <Text style={styles.rowHint}>{record ? "Preferência salva: ligada" : "Preferência salva: desligada"}</Text>
+        </View>
+        <Switch value={record} onValueChange={toggleRecord} trackColor={{ true: theme.colors.yellow }} />
       </View>
     </Screen>
   );
@@ -153,4 +169,5 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   rowLabel: { fontWeight: "600", color: theme.colors.navy },
+  rowHint: { color: theme.colors.textMuted, fontSize: 12, marginTop: 2 },
 });

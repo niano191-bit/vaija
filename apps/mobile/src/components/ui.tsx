@@ -1,6 +1,7 @@
 import React from "react";
 import {
   ActivityIndicator,
+  Linking,
   Platform,
   Pressable,
   StyleSheet,
@@ -192,12 +193,18 @@ export function MapPlaceholder({
   }
 
   return (
-    <View style={[styles.map, { height }]}>
+    <Pressable
+      style={[styles.map, { height }]}
+      onPress={() =>
+        Linking.openURL(`https://www.openstreetmap.org/?mlat=${rLat}&mlon=${rLng}#map=14/${rLat}/${rLng}`)
+      }
+    >
       <View style={styles.mapGrid} />
       {route ? <View style={styles.routeLine} /> : null}
       <View style={styles.pin} />
       <Text style={styles.mapLabel}>{label}</Text>
-    </View>
+      <Text style={styles.mapHint}>Toque para abrir o mapa</Text>
+    </Pressable>
   );
 }
 
@@ -272,5 +279,17 @@ const styles = StyleSheet.create({
     color: theme.colors.navy,
     fontWeight: "600",
     fontSize: 12,
+  },
+  mapHint: {
+    position: "absolute",
+    top: 10,
+    right: 10,
+    color: theme.colors.navy,
+    fontWeight: "700",
+    fontSize: 11,
+    backgroundColor: "rgba(255,255,255,0.85)",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
   },
 });

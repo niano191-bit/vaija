@@ -1,15 +1,17 @@
 import { useFocusEffect } from "expo-router";
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { api, formatBRL, formatDate, STATUS_LABELS, type Ride } from "@vaija/shared";
 import { Screen, Title } from "../../../src/components/ui";
 import { useAuth } from "../../../src/store";
 import { theme } from "../../../src/theme";
 
+type Tab = "todos" | "ativas" | "concluidas";
+
 export default function AtividadeScreen() {
   const token = useAuth((s) => s.token);
   const [rides, setRides] = useState<Ride[]>([]);
-  const [tab, setTab] = useState<"todos" | "corridas">("todos");
+  const [tab, setTab] = useState<Tab>("todos");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -32,18 +34,30 @@ export default function AtividadeScreen() {
     }, [load])
   );
 
-  const list = rides;
+  const list = useMemo(() => {
+    if (tab === "ativas") {
+      return rides.filter((r) => !["concluida", "cancelada"].includes(r.status));
+    }
+    if (tab === "concluidas") {
+      return rides.filter((r) => r.status === "concluida");
+    }
+    return rides;
+  }, [rides, tab]);
 
   return (
     <Screen style={{ paddingTop: 56 }}>
       <View style={{ paddingHorizontal: 20 }}>
         <Title>Atividade</Title>
         <View style={styles.tabs}>
-          {(["todos", "corridas"] as const).map((t) => (
-            <Pressable key={t} onPress={() => setTab(t)} style={[styles.tab, tab === t && styles.tabOn]}>
-              <Text style={[styles.tabText, tab === t && styles.tabTextOn]}>
-                {t === "todos" ? "Todos" : "Corridas"}
-              </Text>
+          {(
+            [
+              ["todos", "Todos"],
+              ["ativas", "Ativas"],
+              ["concluidas", "Concluídas"],
+            ] as const
+          ).map(([id, label]) => (
+            <Pressable key={id} onPress={() => setTab(id)} style={[styles.tab, tab === id && styles.tabOn]}>
+              <Text style={[styles.tabText, tab === id && styles.tabTextOn]}>{label}</Text>
             </Pressable>
           ))}
         </View>
@@ -56,7 +70,13 @@ export default function AtividadeScreen() {
         ) : null}
         {loading ? <Text style={styles.empty}>Carregando...</Text> : null}
         {!loading && !error && list.length === 0 ? (
-          <Text style={styles.empty}>Nenhuma corrida ainda</Text>
+          <Text style={styles.empty}>
+            {tab === "ativas"
+              ? "Nenhuma corrida ativa"
+              : tab === "concluidas"
+                ? "Nenhuma corrida concluída"
+                : "Nenhuma corrida ainda"}
+          </Text>
         ) : null}
         {!loading
           ? list.map((r) => (
